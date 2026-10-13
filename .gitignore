@@ -1,0 +1,61 @@
+*.log
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+.env.backup
+.env.production
+
+# Authentication / private config
+/auth.json
+/storage/*.key
+
+# Local databases
+/database/database.sqlite
+/database/*.sqlite
+/database/*.sqlite3
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build/runtime
+/public/build/
+/public/hot
+/public/storage
+/public/fonts-manifest.dev.json
+
+# Laravel runtime files
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/pail
+/bootstrap/cache/*.php
+
+# IDE / local tools
+/.codex
+/.cursor/
+/.idea/
+/.nova/
+/phpunit.cache/
+/.vscode/
+/.zed/
+.phpactor.json
+.phpunit.result.cache
+
+# Helpers / local VM
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+
+# Local AI / development tooling
+/.agents/
+/.tmp-chrome/
+/.tmp-edge/
+AGENTS.md
+CLAUDE.md
+skills-lock.json
