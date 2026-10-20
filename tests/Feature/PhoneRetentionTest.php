@@ -16,13 +16,6 @@ class PhoneRetentionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Http::fake();
-        config([
-            'whatsapp.enabled' => true, 'whatsapp.access_token' => 'fake-test-token',
-            'whatsapp.app_secret' => 'fake-test-secret', 'whatsapp.verify_token' => 'fake-verify',
-            'whatsapp.phone_number_id' => '12345', 'whatsapp.phone_number' => '628111111111',
-            'whatsapp.business_account_id' => null, 'whatsapp.api_version' => 'v23.0',
-        ]);
     }
 
     public function test_completing_a_ticket_clears_its_phone_number_and_keeps_party_size(): void
@@ -54,7 +47,7 @@ class PhoneRetentionTest extends TestCase
         $this->assertNull($ticket->phone_number);
     }
 
-    public function test_cancelling_a_ticket_clears_its_phone_number_after_the_notice_is_recorded(): void
+    public function test_cancelling_a_ticket_clears_its_phone_number(): void
     {
         $queue = app(QueueService::class);
         $restaurant = $this->restaurant();
@@ -65,7 +58,6 @@ class PhoneRetentionTest extends TestCase
         $ticket->refresh();
         $this->assertSame(QueueTicket::STATUS_CANCELLED, $ticket->status);
         $this->assertNull($ticket->phone_number);
-        $this->assertDatabaseHas('whatsapp_logs', ['event_key' => "ticket:{$ticket->id}:cancelled"]);
     }
 
     public function test_masked_phone_number_keeps_only_prefix_and_suffix(): void

@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\AdminQueueController;
 use App\Http\Controllers\Admin\AdminQueueOverviewController;
 use App\Http\Controllers\Admin\AdminRestaurantController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Controllers\Admin\AdminQrController;
 use App\Http\Controllers\EmailJoinController;
 use App\Http\Controllers\QueueController;
@@ -16,13 +15,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/r/{restaurant:slug}', [RestaurantController::class, 'show'])->name('outlets.show');
-Route::get('/r/{restaurant:slug}/whatsapp', [RestaurantController::class, 'whatsapp'])->middleware('throttle:30,1')->name('outlets.whatsapp');
 Route::get('/r/{restaurant:slug}/status', [RestaurantController::class, 'status'])->middleware('throttle:120,1')->name('outlets.status');
 Route::get('/r/{restaurant:slug}/join', [EmailJoinController::class, 'create'])->middleware('throttle:60,1')->name('outlets.join');
 Route::post('/r/{restaurant:slug}/join', [EmailJoinController::class, 'store'])->middleware('throttle:30,1')->name('outlets.join.store');
-
-Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.verify');
-Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])->name('whatsapp.webhook');
 
 Route::get('/restaurants/{restaurant}', fn (\App\Models\Restaurant $restaurant) => redirect()->route('outlets.show', $restaurant->slug))
     ->name('restaurants.show');

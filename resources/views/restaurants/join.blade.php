@@ -1,6 +1,4 @@
 <x-layouts.customer :title="'Ambil Antrean - '.$restaurant->name.' | SatSet'" :show-header="false">
-    <x-customer.app-header title="Ambil Antrean" eyebrow="Lewat Email" :fallback="route('outlets.show', $restaurant->slug)" />
-
     <style>
         .join-page { max-width: 520px; margin: 0 auto; padding: 16px; display: grid; gap: 20px; }
         .join-page h1 { margin: 4px 0 0; font-size: clamp(24px, 6vw, 30px); line-height: 1.15; color: var(--ink); }
@@ -24,8 +22,9 @@
     </style>
 
     <section class="join-page">
+        <a class="text-link" href="{{ route('outlets.show', $restaurant->slug) }}">&larr; {{ $restaurant->name }}</a>
         <div>
-            <p class="eyebrow">{{ $restaurant->name }}</p>
+            <p class="eyebrow">{{ $restaurant->isPickup() ? 'Ambil di counter' : 'Antrean meja' }}</p>
             <h1>Ambil antrean lewat email</h1>
         </div>
 

@@ -87,11 +87,11 @@ h1,h2,h3{line-height:1.15;overflow-wrap:anywhere}
 .outlet-next strong{display:block;font-size:13px;margin-bottom:4px}
 .outlet-next p>span{display:block;font-size:12px;color:var(--muted)}
 .party-note{font-size:12px;color:var(--muted);margin-top:22px}
-.whatsapp-action{padding-top:24px}
-.whatsapp-cta{width:100%;min-height:52px}
-.whatsapp-action>small{display:block;text-align:center;color:var(--muted);font-size:11px;margin-top:10px}
+.outlet-action{padding-top:24px}
+.outlet-cta{width:100%;min-height:52px}
+.outlet-action>small{display:block;text-align:center;color:var(--muted);font-size:12px;margin-top:10px}
 .notice{max-width:740px;margin:20px auto;padding:14px 18px;background:#fff5dd;border:1px solid #eed8a5;border-radius:6px;font-size:14px;color:#6f5113}
-.whatsapp-action .notice{margin:0}
+.outlet-action .notice{margin:0}
 .ticket-page{max-width:620px;padding:36px 24px;margin:auto;text-align:center}
 .ticket-heading{margin-top:32px}
 .ticket-heading h1{font-size:24px;margin-bottom:14px}
@@ -130,9 +130,9 @@ h1,h2,h3{line-height:1.15;overflow-wrap:anywhere}
     .queue-metrics strong{font-size:34px}
     .queue-metrics small{font-size:12px}
     .outlet-next{grid-template-columns:1fr;gap:18px}
-    .whatsapp-action{padding:18px 0 max(12px,env(safe-area-inset-bottom))}
-    .whatsapp-action>small{font-size:10px}
-    .whatsapp-action .notice{margin-top:10px}
+    .outlet-action{padding:18px 0 max(12px,env(safe-area-inset-bottom))}
+    .outlet-action>small{font-size:12px}
+    .outlet-action .notice{margin-top:10px}
     .footer{padding:24px 20px;gap:10px 20px}
     .footer small{margin-left:0;width:100%}
     .ticket-number{font-size:60px}

@@ -72,7 +72,11 @@ class AdminRestaurantController extends Controller
             'active' => ['nullable', 'boolean'],
             'max_party_size' => ['required', 'integer', 'min:1', 'max:100'],
             'queue_open' => ['nullable', 'boolean'],
-            'queue_mode' => ['required', Rule::in(Restaurant::MODES)],
+            'queue_mode' => ['required', Rule::in(Restaurant::MODES), function ($attribute, $value, $fail) use ($restaurant): void {
+                if ($restaurant && $value !== $restaurant->queue_mode && $restaurant->queueTickets()->whereIn('status', ['waiting', 'called'])->exists()) {
+                    $fail('Mode antrean tidak dapat diubah saat masih ada antrean aktif.');
+                }
+            }],
         ]);
 
         $validated['prefix'] = strtoupper($validated['prefix']);

@@ -8,7 +8,6 @@ use App\Models\QueueTicket;
 use App\Models\Restaurant;
 use App\Models\TicketEmailEvent;
 use App\Models\User;
-use App\Models\WhatsappLog;
 use App\Services\QueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -353,11 +352,6 @@ class EmailAlertsTest extends TestCase
         Mail::assertNothingSent();
         $this->assertNotNull(TicketEmailEvent::query()->where(['queue_ticket_id' => $second->id, 'event' => TicketEmailEvent::CALLED])->value('sent_at'));
         $this->assertNotNull(TicketEmailEvent::query()->where(['queue_ticket_id' => $first->id, 'event' => TicketEmailEvent::THREE_AHEAD])->value('sent_at'));
-    }
-
-    public function test_whatsapp_log_numbers_are_masked_for_staff(): void
-    {
-        $this->assertSame('6281******890', (new WhatsappLog(['phone_number' => '6281234567890']))->maskedPhoneNumber());
     }
 
     public function test_masking_and_normalization_helpers(): void

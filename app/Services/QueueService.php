@@ -6,9 +6,7 @@ use App\Models\QueueTicket;
 use App\Models\Restaurant;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class QueueService
 {
@@ -257,19 +255,6 @@ class QueueService
 
     private function afterChange(Restaurant $restaurant, ?QueueTicket $ticket = null, ?string $event = null): void
     {
-        try {
-            $notifications = app(QueueWhatsAppNotificationService::class);
-            if ($event === 'called') {
-                $notifications->notifyCalled($ticket);
-            } elseif ($event === 'cancelled') {
-                $notifications->notifyCancelled($ticket);
-            }
-            $notifications->notifyWaitingPositions($restaurant, $this);
-            app(WhatsAppService::class)->dispatchPending();
-        } catch (Throwable) {
-            Log::error('Queue updated but notification scheduling failed', ['restaurant_id' => $restaurant->id]);
-        }
-
         app(QueueEmailNotificationService::class)->afterChange($restaurant, $this, $ticket, $event);
     }
 }

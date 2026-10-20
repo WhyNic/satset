@@ -57,7 +57,7 @@
                             </td>
                             <td><span class="admin-status {{ $snapshot['available'] ? 'admin-status-waiting' : 'admin-status-cancelled' }}">{{ $snapshot['available'] ? 'Dibuka' : 'Ditutup' }}</span></td>
                             <td>{{ $restaurant->getAttribute('current_number') ?? '-' }}</td>
-                            <td>{{ $restaurant->getAttribute('waiting_count') }} kelompok</td>
+                            <td>{{ $restaurant->getAttribute('waiting_count') }} {{ $restaurant->isPickup() ? 'pesanan' : 'kelompok' }}</td>
                             <td>{{ $snapshot['estimated_wait'] }} menit</td>
                             <td><a class="admin-table-action" href="{{ route('admin.restaurants.queue', $restaurant) }}">Kelola Antrean</a></td>
                         </tr>

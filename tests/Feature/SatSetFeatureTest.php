@@ -18,7 +18,6 @@ class SatSetFeatureTest extends TestCase
     {
         parent::setUp();
         Http::preventStrayRequests();
-        config(['whatsapp.enabled' => false]);
     }
 
     public function test_qr_landing_displays_stats_without_creating_ticket(): void
@@ -143,7 +142,6 @@ class SatSetFeatureTest extends TestCase
     {
         $restaurant = $this->restaurant(['queue_open' => false]);
         $this->get(route('outlets.show', $restaurant->slug))->assertOk()->assertSee('Antrean sedang ditutup');
-        $this->get(route('outlets.whatsapp', $restaurant->slug))->assertConflict();
         $this->assertDatabaseCount('queue_tickets', 0);
     }
 

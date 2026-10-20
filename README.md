@@ -1,24 +1,26 @@
 # SatSet
 
-SatSet adalah web app antrean virtual untuk bazaar, food festival, dan restoran. Customer dapat memilih restoran, mengambil tiket digital tanpa login, melihat Active Queue, menerima Web Push Notification saat antrean mendekat, dan mendapat rekomendasi restoran alternatif saat antrean terlalu panjang.
+SatSet adalah antrean virtual untuk restoran, cafe, bazaar, dan tenant makanan. Customer memindai QR outlet, mendaftar dengan email, dan mendapat email saat antreannya maju, saat giliran tiba, atau saat antrean dibatalkan. Tidak perlu login.
+
+Ada dua mode per outlet:
+
+- **Antrean meja** (`seating`): customer mengisi jumlah tamu dan email. Antrean untuk kursi.
+- **Ambil di counter** (`pickup`): customer hanya mengisi email. Antrean untuk pesanan yang diambil di counter, tanpa kursi.
 
 ## Stack
 
-- Backend: Laravel 13
-- Frontend: Laravel Blade, HTML, CSS, vanilla JavaScript
-- Database: MySQL untuk development utama, SQLite untuk automated test
-- Push notification: `laravel-notification-channels/webpush`
-- Customer notification runtime: Service Worker, Web Push API, Web App Manifest
+- Laravel 13, Blade, HTML, CSS, JavaScript biasa
+- Database: SQLite untuk development dan test, MySQL bisa dipakai untuk development utama
+- Email: kanal mail bawaan Laravel
+- Antrean (queue): `database`, dijalankan dengan `queue:work`, atau `sync` untuk demo
 
 ## Requirements
 
-- PHP 8.3 atau lebih baru
+- PHP 8.3 atau lebih baru, dengan `pdo_sqlite` (test) atau `pdo_mysql`, `fileinfo`
 - Composer
-- MySQL atau MariaDB
-- PHP extension `ext-curl` untuk pengiriman Web Push asli
-- Browser secure context: `localhost` atau `127.0.0.1` untuk development
+- SMTP untuk mengirim email (lihat bagian Email)
 
-## Installation
+## Setup
 
 ```bash
 composer install
@@ -26,183 +28,86 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-## Database Setup
-
-Buat database MySQL:
-
-```sql
-CREATE DATABASE satset CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-Pastikan `.env` memakai koneksi MySQL:
+Untuk SQLite, set di `.env`:
 
 ```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=satset
-DB_USERNAME=root
-DB_PASSWORD=
+DB_CONNECTION=sqlite
 ```
 
-Lalu jalankan migration dan seeder:
+Lalu buat file database dan jalankan migration:
 
 ```bash
-php artisan migrate --seed
+touch database/database.sqlite   # Windows PowerShell: New-Item database\database.sqlite -Force
+php artisan migrate
+php artisan db:seed --class=RestaurantSeeder
 ```
 
-Seeder membuat:
+Untuk MySQL, atur `DB_CONNECTION=mysql` dan kredensial database di `.env`, lalu jalankan `php artisan migrate` dan seeder yang sama.
 
-- Restoran A: Ayam Bakar Nusantara
-- Restoran B: Ayam Geprek Mantap
-- Restoran C: Rice Bowl & More
-- Sample queue agar dashboard terlihat hidup
-- Admin: `admin@satset.local` / `password`
+Seeder membuat tiga outlet: Ayam Bakar Nusantara, Ayam Geprek Mantap, dan Rice Bowl & More.
 
-## Web Push Setup
-
-SatSet memakai package:
+Akun admin tidak dibuat otomatis. Buat dengan perintah ini, lalu isi password minimal 12 karakter saat diminta:
 
 ```bash
-composer require laravel-notification-channels/webpush
-php artisan vendor:publish --provider="NotificationChannels\WebPush\WebPushServiceProvider" --tag="config"
-php artisan vendor:publish --provider="NotificationChannels\WebPush\WebPushServiceProvider" --tag="migrations"
-php artisan webpush:vapid
+php artisan satset:admin email-anda@contoh.com
 ```
 
-Pastikan `.env` memiliki VAPID keys. Private key jangan di-hardcode ke frontend.
+## Email
+
+Isi `MAIL_*` di `.env`. Untuk demo, penyedia email dengan sandbox seperti Mailtrap cukup dan emailnya bisa dilihat di dashboard tanpa risiko masuk spam. Untuk produksi, pakai domain sendiri dengan SPF, DKIM, dan DMARC, atau penyedia email transaksional.
 
 ```env
-VAPID_PUBLIC_KEY=
-VAPID_PRIVATE_KEY=
-VAPID_SUBJECT=http://localhost
+MAIL_MAILER=smtp
+MAIL_HOST=...
+MAIL_PORT=...
+MAIL_USERNAME=...
+MAIL_PASSWORD=...
+MAIL_FROM_ADDRESS="hello@contoh.com"
+MAIL_FROM_NAME="SatSet"
+
+EMAIL_ALERTS_ENABLED=true
+EMAIL_ALERTS_MAX_ACTIVE_PER_EMAIL=3
 ```
 
-Untuk local development, `VAPID_SUBJECT=http://localhost` valid. Browser tetap dapat membuka app dari `http://127.0.0.1:8000`.
+`EMAIL_ALERTS_ENABLED=false` menghentikan pengiriman tanpa mengganggu antrean. Setiap email dikirim lewat queue, dengan percobaan ulang saat gagal.
 
-## Web Push Architecture
-
-Customer tidak login dan tidak mengisi nomor telepon. Subscription browser dihubungkan ke `QueueTicket` lewat trait `HasPushSubscriptions` dari package webpush.
-
-Flow customer:
-
-1. Customer membuka `/`.
-2. Customer memilih restoran.
-3. Jika antrean panjang, customer melihat rekomendasi restoran alternatif.
-4. Customer klik `Ambil Antrean`.
-5. Backend membuat `QueueTicket` dengan `public_token`.
-6. Customer diarahkan ke `/queue/{public_token}`.
-7. Customer klik `Aktifkan Notifikasi`.
-8. Browser meminta permission, mendaftarkan `public/sw.js`, membuat Push subscription, lalu mengirim subscription ke Laravel.
-9. Saat admin memanggil antrean berikutnya, backend mengirim Web Push ke ticket yang relevan.
-
-`/queue/{public_token}` tetap menjadi URL publik customer. Database ID tidak diekspos.
-
-## Service Worker And Manifest
-
-File utama:
-
-- `public/sw.js`
-- `public/manifest.json`
-- `public/icons/icon-192.png`
-- `public/icons/icon-512.png`
-- `public/icons/badge-72.png`
-
-Service worker menangani:
-
-- `push` event untuk menampilkan notification
-- `notificationclick` untuk membuka `/queue/{public_token}`
-
-Manifest membuat SatSet siap dipasang sebagai Home Screen web app, terutama untuk dukungan Web Push di iOS/iPadOS 16.4+.
-
-## Customer Routes
-
-- `GET /`
-- `GET /restaurants/{id}`
-- `GET /restaurants/{id}/recommendations`
-- `GET /restaurants/{id}/queue/new`
-- `POST /restaurants/{id}/queue`
-- `GET /queue/{ticket:public_token}`
-- `GET /queue/{ticket:public_token}/status`
-- `POST /queue/{ticket:public_token}/cancel`
-- `POST /queue/{ticket:public_token}/push-subscription`
-- `DELETE /queue/{ticket:public_token}/push-subscription`
-
-## Admin Routes
-
-- `GET /admin`
-- `GET /admin/login`
-- `POST /admin/login`
-- `POST /admin/logout`
-- `GET /admin/dashboard`
-- `GET /admin/queues`
-- `GET /admin/restaurants`
-- `GET /admin/restaurants/create`
-- `POST /admin/restaurants`
-- `GET /admin/restaurants/{id}/edit`
-- `PUT /admin/restaurants/{id}`
-- `DELETE /admin/restaurants/{id}`
-- `GET /admin/restaurants/{id}/queue`
-- `POST /admin/restaurants/{id}/queue/call-next`
-- `POST /admin/restaurants/{id}/queue/complete`
-- `POST /admin/restaurants/{id}/queue/skip`
-- `POST /admin/restaurants/{id}/queue/reset`
-- `POST /admin/restaurants/{id}/queue/{ticket}/cancel`
-
-## Notification Triggers
-
-Saat admin menjalankan `Panggil Berikutnya`, SatSet:
-
-- menandai ticket berikutnya sebagai `called`
-- mengirim `QueueCalledNotification` jika belum pernah terkirim
-- menghitung ulang posisi semua ticket `waiting`
-- mengirim `QueueAlmostTurnNotification` saat posisi tinggal 3
-- mengirim `QueueAlmostTurnNotification` saat posisi tinggal 1
-
-Timestamp anti-duplikasi:
-
-- `three_ahead_notified_at`
-- `one_ahead_notified_at`
-- `called_notified_at`
-
-Cancellation menggunakan `QueueCancelledNotification`.
-
-## Localhost Testing
-
-Jalankan:
+## Menjalankan
 
 ```bash
 php artisan serve
 ```
 
-Buka:
+Buka `http://127.0.0.1:8000`.
 
-- Customer home: `http://127.0.0.1:8000`
-- Admin login: `http://127.0.0.1:8000/admin/login`
+Untuk operasional, dua proses tambahan diperlukan:
 
-Manual demo:
+- **Queue worker:** email dikirim lewat queue. Jalankan `php artisan queue:work`. Untuk demo, `QUEUE_CONNECTION=sync` cukup dan tidak perlu worker.
+- **Scheduler:** membersihkan failed jobs setiap hari. Jalankan `php artisan schedule:run` lewat cron atau Task Scheduler setiap menit.
 
-1. Customer: buka `/`, pilih restoran, klik `Ambil Antrean`.
-2. Customer: di Active Queue klik `Aktifkan Notifikasi`, lalu allow permission.
-3. Admin: login, buka Queue Management restoran, klik `Panggil Berikutnya` beberapa kali.
-4. Customer menerima notification saat tinggal 3 antrean, tinggal 1 antrean, dan saat dipanggil.
-5. Klik notification membuka `/queue/{public_token}`.
+## Halaman
 
-## Mobile Support
+Customer:
 
-- Android Chrome: Web Push didukung pada secure context.
-- Desktop Chrome/Edge: Web Push didukung pada secure context.
-- iPhone/iPad: Web Push berlaku untuk Home Screen web apps di iOS/iPadOS 16.4+. Tambahkan SatSet ke Home Screen, lalu minta permission dari app yang sudah terpasang.
+- `/` daftar restoran
+- `/r/{slug}` halaman outlet, titik masuk dari QR
+- `/r/{slug}/join` form pendaftaran dengan email (dan jumlah tamu untuk mode meja)
+- `/queue/{public_token}` tiket customer, diperbarui otomatis
+- `/restaurants/{id}/recommendations` rekomendasi saat antrean panjang
 
-Jangan mengasumsikan Safari iPhone biasa bekerja sama seperti Android browser tab.
+Admin, setelah login di `/admin/login`:
 
-## Troubleshooting Notification Permission
+- `/admin/dashboard`
+- `/admin/queues` daftar semua antrean, kontak yang disamarkan, dan jumlah email terkirim
+- `/admin/restaurants` kelola outlet, termasuk mode antrean dan status pendaftaran
+- `/admin/restaurants/{id}/queue` panggil berikutnya, selesai, lewati, dan batalkan
+- `/admin/qr` QR code untuk setiap outlet
 
-- Jika browser menampilkan `Notifikasi diblokir`, customer tetap bisa memantau antrean dari Active Queue.
-- Jika tombol mengatakan browser belum mendukung push, gunakan Chrome/Edge terbaru.
-- Jika permission pernah ditolak, ubah izin site dari browser settings.
-- Jika notification tidak terkirim dari server, cek `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, dan pastikan PHP `ext-curl` aktif.
-- Setelah mengubah `.env`, jalankan `php artisan config:clear`.
+## Privasi
+
+- Email dan nomor telepon dihapus dari tiket saat tiket selesai, dilewati, atau dibatalkan.
+- Di admin, kontak tampil disamarkan, misalnya `t***@contoh.com`.
+- Failed jobs dibersihkan setiap hari, karena payload-nya bisa memuat email.
+- Customer tidak perlu login, dan halaman tiket hanya bisa dibuka lewat `public_token`.
 
 ## Testing
 
@@ -210,29 +115,10 @@ Jangan mengasumsikan Safari iPhone biasa bekerja sama seperti Android browser ta
 php artisan test
 ```
 
-Test mencakup:
+Test mencakup alur pendaftaran, mode meja dan ambil, batas antrean per email, retensi data, pengiriman email, kegagalan SMTP, dan test chaos. Test chaos menjalankan operasi acak dengan SMTP yang gagal secara terkontrol, lalu memeriksa bahwa setiap email terkirim tepat sekali.
 
-- Customer dapat membuat queue ticket tanpa login
-- Queue number generated correctly
-- Estimated waiting time correctly calculated
-- Admin can call next customer
-- Cancelled customer tidak lagi masuk active queue
-- Recommendation memilih restoran kategori sama dengan waktu lebih pendek
-- Push subscription dapat disimpan
-- Invalid public token ditolak
-- Notification tinggal 3 antrean hanya ditandai/terkirim sekali
-- Notification tinggal 1 antrean hanya ditandai/terkirim sekali
-- Called notification hanya ditandai/terkirim sekali
-- Refresh Active Queue tidak membuat ticket baru
+## Catatan
 
-## Database Tables
-
-- `users`
-- `restaurants`
-- `queue_tickets`
-- `push_subscriptions`
-- tabel bawaan Laravel untuk sessions, cache, jobs, password reset
-
-## Notes
-
-Project ini tidak memakai React, Next.js, Vue, Redis, Docker, atau WebSocket. Active Queue memakai AJAX polling setiap 7 detik dari halaman tiket digital.
+- Project ini tidak memakai React, Vue, Redis, Docker, atau WebSocket. Halaman tiket memperbarui diri dengan polling.
+- Tabel `whatsapp_logs` dan migration WhatsApp dari riwayat sebelumnya tidak dihapus. Kode WhatsApp sudah dihapus dari branch ini.
+- Belum ada role selain admin. Semua akun admin memiliki akses penuh.

@@ -3,7 +3,7 @@
         <div>
             <p class="admin-kicker">Admin Queue Overview</p>
             <h1>Seluruh antrean</h1>
-            <p>Riwayat kelompok dan antrean aktif dari seluruh outlet.</p>
+            <p>Riwayat antrean dan antrean aktif dari seluruh outlet.</p>
         </div>
     </section>
 

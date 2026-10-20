@@ -23,7 +23,7 @@
             <label>Image URL <input name="image" value="{{ old('image', $restaurant->image) }}">@error('image')<small>{{ $message }}</small>@enderror</label>
             <div class="admin-form-grid three">
                 <label>Prefix <input name="prefix" value="{{ old('prefix', $restaurant->prefix) }}" required>@error('prefix')<small>{{ $message }}</small>@enderror</label>
-                <label>Average Service Time <input type="number" name="average_service_minutes" min="1" value="{{ old('average_service_minutes', $restaurant->average_service_minutes ?? 5) }}" required>@error('average_service_minutes')<small>{{ $message }}</small>@enderror</label>
+                <label>Rata-rata waktu layanan per tamu atau pesanan (menit) <input type="number" name="average_service_minutes" min="1" value="{{ old('average_service_minutes', $restaurant->average_service_minutes ?? 5) }}" required>@error('average_service_minutes')<small>{{ $message }}</small>@enderror</label>
                 <label>Max Wait Time <input type="number" name="max_wait_minutes" min="1" value="{{ old('max_wait_minutes', $restaurant->max_wait_minutes ?? 30) }}" required>@error('max_wait_minutes')<small>{{ $message }}</small>@enderror</label>
             </div>
             <input type="hidden" name="active" value="0">

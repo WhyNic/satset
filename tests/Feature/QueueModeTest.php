@@ -21,7 +21,7 @@ class QueueModeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['email_alerts.enabled' => true, 'email_alerts.max_active_per_email' => 3, 'whatsapp.enabled' => false]);
+        config(['email_alerts.enabled' => true, 'email_alerts.max_active_per_email' => 3]);
         Mail::fake();
     }
 
@@ -115,6 +115,18 @@ class QueueModeTest extends TestCase
 
         $this->actingAs(User::factory()->create())
             ->put(route('admin.restaurants.update', $restaurant), $this->payload(['queue_mode' => 'food-court']))
+            ->assertSessionHasErrors('queue_mode');
+
+        $this->assertSame(Restaurant::MODE_SEATING, $restaurant->fresh()->queue_mode);
+    }
+
+    public function test_mode_cannot_change_while_the_outlet_has_active_tickets(): void
+    {
+        $restaurant = $this->restaurant();
+        app(QueueService::class)->createTicket($restaurant, partySize: 2, email: 'tamu@contoh.test');
+
+        $this->actingAs(User::factory()->create())
+            ->put(route('admin.restaurants.update', $restaurant), $this->payload(['queue_mode' => 'pickup']))
             ->assertSessionHasErrors('queue_mode');
 
         $this->assertSame(Restaurant::MODE_SEATING, $restaurant->fresh()->queue_mode);

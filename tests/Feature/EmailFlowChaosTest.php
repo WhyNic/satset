@@ -27,7 +27,7 @@ class EmailFlowChaosTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['email_alerts.enabled' => true, 'email_alerts.max_active_per_email' => 3, 'whatsapp.enabled' => false]);
+        config(['email_alerts.enabled' => true, 'email_alerts.max_active_per_email' => 3]);
         FlakyMailTransport::reset();
         $this->useMailer('flaky', 40);
     }
@@ -144,7 +144,7 @@ class EmailFlowChaosTest extends TestCase
 
     // ----- UX contracts -------------------------------------------------------------------
 
-    public function test_outlet_and_home_show_email_join_and_no_dead_whatsapp_controls_when_whatsapp_is_off(): void
+    public function test_outlet_and_home_show_only_the_email_join(): void
     {
         $restaurant = $this->restaurant();
 
@@ -159,25 +159,8 @@ class EmailFlowChaosTest extends TestCase
         $this->get(route('home'))->assertOk()->assertDontSee('WhatsApp');
     }
 
-    public function test_outlet_offers_whatsapp_as_an_extra_only_when_it_is_configured(): void
+    public function test_admin_has_no_whatsapp_logs_page_or_menu(): void
     {
-        config([
-            'whatsapp.enabled' => true, 'whatsapp.access_token' => 'fake-test-token',
-            'whatsapp.phone_number_id' => '12345', 'whatsapp.phone_number' => '628111111111', 'whatsapp.api_version' => 'v23.0',
-        ]);
-        $restaurant = $this->restaurant();
-
-        $this->get(route('outlets.show', $restaurant->slug))
-            ->assertSee('Ambil antrean')
-            ->assertSee('Lanjut via WhatsApp');
-    }
-
-    public function test_admin_has_no_whatsapp_logs_page_or_menu_even_when_whatsapp_is_configured(): void
-    {
-        config([
-            'whatsapp.enabled' => true, 'whatsapp.access_token' => 'fake-test-token',
-            'whatsapp.phone_number_id' => '12345', 'whatsapp.api_version' => 'v23.0',
-        ]);
         $admin = User::factory()->create();
 
         $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('WhatsApp Logs');

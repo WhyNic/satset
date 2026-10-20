@@ -409,6 +409,12 @@ select {
 
 .admin-form input,
 .admin-form textarea,
+.admin-form select {
+    font-weight: 450;
+}
+
+.admin-form input,
+.admin-form textarea,
 .admin-form select,
 .admin-filter-bar input,
 .admin-filter-bar select {
@@ -569,7 +575,17 @@ select {
 }
 
 .admin-queue-overview .admin-table {
-    min-width: 980px;
+    min-width: 0;
+}
+
+.admin-queue-overview .admin-table th,
+.admin-queue-overview .admin-table td {
+    padding: 12px 10px;
+}
+
+.admin-queue-overview .admin-table td:last-child,
+.admin-queue-overview .admin-table th:last-child {
+    white-space: nowrap;
 }
 
 .admin-queue-overview .admin-table td:nth-child(2),

@@ -9,18 +9,15 @@
                 <span class="availability {{ $snapshot['available'] ? '' : 'closed' }}" data-outlet-availability>{{ $snapshot['available'] ? 'Antrean sedang dibuka' : 'Antrean sedang ditutup' }}</span>
             </div>
             <section class="queue-overview" aria-label="Kondisi antrean">
-                <div class="serving-row"><span>Sedang dilayani</span><strong data-outlet-current>{{ $snapshot['current_number'] ?? 'Belum ada' }}</strong></div>
+                <div class="serving-row"><span>{{ $restaurant->isPickup() ? 'Sedang diambil' : 'Sedang dilayani' }}</span><strong data-outlet-current>{{ $snapshot['current_number'] ?? 'Belum ada' }}</strong></div>
                 <div class="queue-metrics">
                     <div><span>Sedang menunggu</span><strong><span data-outlet-waiting>{{ $snapshot['waiting_count'] }}</span> <small>antrean</small></strong></div>
                     <div><span>Estimasi waktu</span><strong><span class="estimate-sign">&plusmn;</span><span data-outlet-estimate>{{ $snapshot['estimated_wait'] }}</span> <small>menit</small></strong></div>
                 </div>
                 <p class="live-note" data-live-note>Estimasi dapat berubah sesuai pelayanan outlet.</p>
             </section>
-            <div class="whatsapp-action">
+            <div class="outlet-action">
                 <a class="button button-green" href="{{ route('outlets.join', $restaurant->slug) }}" @if(!$snapshot['available']) hidden @endif data-outlet-join>Ambil antrean <span aria-hidden="true">&nearr;</span></a>
-                @if($whatsappUrl)
-                    <a class="button button-outline" href="{{ route('outlets.whatsapp', $restaurant->slug) }}" @if(!$snapshot['available']) hidden @endif data-outlet-cta>Lanjut via WhatsApp</a>
-                @endif
                 <p data-outlet-closed @if($snapshot['available']) hidden @endif>Antrean sedang ditutup. Silakan hubungi staf outlet.</p>
                 <small>Tanpa login. {{ $restaurant->isPickup() ? 'Isi email Anda, lalu nomor pesanan dibuat setelah Anda kirim.' : 'Isi jumlah tamu dan email, lalu nomor antrean dibuat setelah Anda kirim.' }}</small>
             </div>

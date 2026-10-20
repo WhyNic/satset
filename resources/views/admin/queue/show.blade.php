@@ -10,7 +10,7 @@
 
     <section class="admin-summary-grid">
         <article>
-            <span>Sedang dilayani</span>
+            <span>{{ $restaurant->isPickup() ? 'Sedang diambil' : 'Sedang dilayani' }}</span>
             <strong>{{ $current?->queue_number ?? '-' }}</strong>
         </article>
         <article>
@@ -31,7 +31,7 @@
         <div class="admin-panel-heading">
             <div>
                 <h2>Operasional antrean</h2>
-                <p>{{ $current ? 'Selesaikan atau lewati antrean saat ini sebelum memanggil berikutnya.' : 'Siap memanggil kelompok berikutnya.' }}</p>
+                <p>{{ $current ? 'Selesaikan atau lewati antrean saat ini sebelum memanggil berikutnya.' : ($restaurant->isPickup() ? 'Siap memanggil pesanan berikutnya.' : 'Siap memanggil kelompok berikutnya.') }}</p>
             </div>
             <div class="admin-actions">
                 <form method="post" action="{{ route('admin.restaurants.queue.call-next', $restaurant) }}">@csrf<button class="admin-primary-button" type="submit" @disabled($current || $waiting->isEmpty())>Panggil Berikutnya</button></form>
@@ -45,7 +45,7 @@
         <div class="admin-panel-heading">
             <div>
                 <h2>Antrean aktif</h2>
-                <p>Satu nomor antrean untuk satu kelompok.</p>
+                <p>{{ $restaurant->isPickup() ? 'Satu nomor untuk satu pesanan.' : 'Satu nomor antrean untuk satu kelompok.' }}</p>
             </div>
         </div>
 

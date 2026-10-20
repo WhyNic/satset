@@ -3,7 +3,7 @@
         <div>
             <p class="admin-kicker">Restaurant Management</p>
             <h1>Kelola restoran</h1>
-            <p>Kelola outlet, kapasitas kelompok, dan akses QR.</p>
+            <p>Kelola outlet, mode antrean, kapasitas tamu, dan akses QR.</p>
         </div>
         <a class="admin-primary-button" href="{{ route('admin.restaurants.create') }}">Tambah Restoran</a>
     </section>
@@ -18,7 +18,7 @@
                         <th>Mode</th>
                         <th>Maks. Tamu</th>
                         <th>Prefix</th>
-                        <th>Average Service Time</th>
+                        <th>Waktu layanan (menit)</th>
                         <th>Pendaftaran</th>
                         <th>Active</th>
                         <th>Action</th>
