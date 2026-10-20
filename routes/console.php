@@ -31,6 +31,32 @@ Artisan::command('satset:admin {email} {--name=SatSet Admin}', function (): void
 
         return;
     }
-    \App\Models\User::create(['name' => $this->option('name'), 'email' => $email, 'password' => \Illuminate\Support\Facades\Hash::make($password)]);
-    $this->info('Akun admin dibuat.');
-})->purpose('Create an administrator without a default password');
+    \App\Models\User::create(['name' => $this->option('name'), 'email' => $email, 'password' => \Illuminate\Support\Facades\Hash::make($password), 'role' => 'owner', 'active' => true]);
+    $this->info('Akun pemilik SatSet dibuat. Akun admin outlet dibuat dari menu Akun admin.');
+})->purpose('Create a SatSet owner account without a default password');
+
+Artisan::command('satset:lan {--port=8000}', function (): void {
+    $port = (int) $this->option('port');
+    $addresses = collect(gethostbynamel(gethostname()) ?: [])
+        ->filter(fn (string $ip): bool => filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+            && ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE))
+        // VirtualBox/VMware host-only adapters are not reachable from a phone.
+        ->reject(fn (string $ip): bool => str_starts_with($ip, '192.168.56.'))
+        ->values();
+
+    if ($addresses->isEmpty()) {
+        $this->error('Alamat jaringan tidak ditemukan. Pastikan laptop terhubung ke Wi-Fi.');
+
+        return;
+    }
+
+    $this->info('Buka salah satu alamat ini di browser LAPTOP, lalu scan QR-nya dengan HP (HP harus di Wi-Fi yang sama):');
+    foreach ($addresses as $ip) {
+        $this->line("  Admin QR : http://{$ip}:{$port}/admin/qr");
+    }
+    $this->newLine();
+    $this->comment('Jika HP tidak bisa membuka halaman, izinkan PHP di Windows Firewall untuk jaringan Private.');
+    $this->newLine();
+
+    $this->call('serve', ['--host' => '0.0.0.0', '--port' => $port]);
+})->purpose('Serve SatSet on the local network so phones can scan outlet QR codes');

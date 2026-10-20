@@ -64,6 +64,19 @@ class QueueTicket extends Model
         return $this->belongsTo(Restaurant::class);
     }
 
+    public const STATUS_LABELS = [
+        self::STATUS_WAITING => 'Menunggu',
+        self::STATUS_CALLED => 'Dipanggil',
+        self::STATUS_COMPLETED => 'Selesai',
+        self::STATUS_CANCELLED => 'Dibatalkan',
+        self::STATUS_SKIPPED => 'Dilewati',
+    ];
+
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status] ?? ucfirst($this->status);
+    }
+
     public function isActive(): bool
     {
         return in_array($this->status, [self::STATUS_WAITING, self::STATUS_CALLED], true);

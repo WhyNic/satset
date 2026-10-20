@@ -1,40 +1,71 @@
 # SatSet
 
-SatSet adalah web app antrean virtual untuk bazaar, food festival, dan restoran. Customer dapat memilih restoran, mengambil tiket digital tanpa login, melihat Active Queue, menerima Web Push Notification saat antrean mendekat, dan mendapat rekomendasi restoran alternatif saat antrean terlalu panjang.
+SatSet adalah antrean virtual untuk bisnis F&B (restoran, cafe, food stall). Customer **scan QR di outlet**, mendaftar lewat **chatbot WhatsApp**, lalu menerima kabar giliran lewat WhatsApp tanpa harus berdiri menunggu.
 
-## Stack
+```text
+Scan QR di outlet → halaman outlet (/r/{slug}) → "Lanjut via WhatsApp"
+→ chatbot: jumlah tamu → konfirmasi YA → nomor antrean (mis. A-001)
+→ notifikasi: tinggal 3 antrean, tinggal 1 antrean, giliran tiba
+```
 
-- Backend: Laravel 13
-- Frontend: Laravel Blade, HTML, CSS, vanilla JavaScript
-- Database: MySQL untuk development utama, SQLite untuk automated test
-- Push notification: `laravel-notification-channels/webpush`
-- Customer notification runtime: Service Worker, Web Push API, Web App Manifest
+> - Menjalankan SatSet untuk presentasi atau demo: [docs/PANDUAN-PRESENTASI.md](docs/PANDUAN-PRESENTASI.md)
+> - Mencoba seluruh fitur langkah demi langkah: [docs/PANDUAN-UJI-COBA.md](docs/PANDUAN-UJI-COBA.md)
 
-## Requirements
+## Daftar isi
 
-- PHP 8.3 atau lebih baru
+1. [Teknologi](#teknologi)
+2. [Kebutuhan](#kebutuhan)
+3. [Instalasi pertama kali](#instalasi-pertama-kali)
+4. [Menjalankan aplikasi](#menjalankan-aplikasi)
+5. [Akses dari HP dengan scan QR](#akses-dari-hp-dengan-scan-qr)
+6. [Akun admin dan peran](#akun-admin-dan-peran)
+7. [Mencoba chatbot tanpa WhatsApp](#mencoba-chatbot-tanpa-whatsapp)
+8. [Menghubungkan WhatsApp (Twilio / Meta)](#menghubungkan-whatsapp)
+9. [Test otomatis](#test-otomatis)
+10. [Masalah umum](#masalah-umum)
+
+## Teknologi
+
+- **Backend:** Laravel 13 (PHP 8.3+)
+- **Frontend:** Blade, CSS, dan JavaScript biasa (tanpa build step, file ada di `public/css` dan `public/js`)
+- **Database:** MySQL untuk development, SQLite in-memory untuk test
+- **WhatsApp:** Twilio atau Meta WhatsApp Cloud API (pilih lewat `.env`)
+- **QR code:** `endroid/qr-code`
+
+## Kebutuhan
+
+- PHP **8.3 atau lebih baru** dengan ekstensi `pdo_mysql`, `mbstring`, `openssl`, `curl`, `fileinfo`
 - Composer
-- MySQL atau MariaDB
-- PHP extension `ext-curl` untuk pengiriman Web Push asli
-- Browser secure context: `localhost` atau `127.0.0.1` untuk development
+- MySQL atau MariaDB (MySQL Server atau XAMPP; **pakai salah satu saja** agar port 3306 tidak bentrok)
+- Node.js **tidak** diperlukan
 
-## Installation
+## Instalasi pertama kali
+
+Jalankan perintah berikut dari folder proyek (folder yang berisi file `artisan`).
+
+**1. Instal dependency PHP**
 
 ```bash
 composer install
+```
+
+**2. Buat file `.env` dan app key**
+
+```bash
 cp .env.example .env
+```
+
+```bash
 php artisan key:generate
 ```
 
-## Database Setup
-
-Buat database MySQL:
+**3. Buat database MySQL** bernama `satset`, lewat terminal MySQL atau phpMyAdmin:
 
 ```sql
 CREATE DATABASE satset CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Pastikan `.env` memakai koneksi MySQL:
+**4. Isi koneksi database di `.env`**
 
 ```env
 DB_CONNECTION=mysql
@@ -42,197 +73,199 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=satset
 DB_USERNAME=root
-DB_PASSWORD=
+DB_PASSWORD=password_mysql_anda
 ```
 
-Lalu jalankan migration dan seeder:
+Untuk XAMPP, `DB_PASSWORD` biasanya dikosongkan.
+
+**5. Buat tabel dan data contoh** (3 restoran contoh beserta beberapa antrean)
 
 ```bash
 php artisan migrate --seed
 ```
 
-Seeder membuat:
-
-- Restoran A: Ayam Bakar Nusantara
-- Restoran B: Ayam Geprek Mantap
-- Restoran C: Rice Bowl & More
-- Sample queue agar dashboard terlihat hidup
-- Admin: `admin@satset.local` / `password`
-
-## Web Push Setup
-
-SatSet memakai package:
+**6. Buat akun pemilik SatSet** (Anda akan diminta mengetik password minimal 12 karakter)
 
 ```bash
-composer require laravel-notification-channels/webpush
-php artisan vendor:publish --provider="NotificationChannels\WebPush\WebPushServiceProvider" --tag="config"
-php artisan vendor:publish --provider="NotificationChannels\WebPush\WebPushServiceProvider" --tag="migrations"
-php artisan webpush:vapid
+php artisan satset:admin email@anda.com --name="Nama Anda"
 ```
 
-Pastikan `.env` memiliki VAPID keys. Private key jangan di-hardcode ke frontend.
-
-```env
-VAPID_PUBLIC_KEY=
-VAPID_PRIVATE_KEY=
-VAPID_SUBJECT=http://localhost
-```
-
-Untuk local development, `VAPID_SUBJECT=http://localhost` valid. Browser tetap dapat membuka app dari `http://127.0.0.1:8000`.
-
-## Web Push Architecture
-
-Customer tidak login dan tidak mengisi nomor telepon. Subscription browser dihubungkan ke `QueueTicket` lewat trait `HasPushSubscriptions` dari package webpush.
-
-Flow customer:
-
-1. Customer membuka `/`.
-2. Customer memilih restoran.
-3. Jika antrean panjang, customer melihat rekomendasi restoran alternatif.
-4. Customer klik `Ambil Antrean`.
-5. Backend membuat `QueueTicket` dengan `public_token`.
-6. Customer diarahkan ke `/queue/{public_token}`.
-7. Customer klik `Aktifkan Notifikasi`.
-8. Browser meminta permission, mendaftarkan `public/sw.js`, membuat Push subscription, lalu mengirim subscription ke Laravel.
-9. Saat admin memanggil antrean berikutnya, backend mengirim Web Push ke ticket yang relevan.
-
-`/queue/{public_token}` tetap menjadi URL publik customer. Database ID tidak diekspos.
-
-## Service Worker And Manifest
-
-File utama:
-
-- `public/sw.js`
-- `public/manifest.json`
-- `public/icons/icon-192.png`
-- `public/icons/icon-512.png`
-- `public/icons/badge-72.png`
-
-Service worker menangani:
-
-- `push` event untuk menampilkan notification
-- `notificationclick` untuk membuka `/queue/{public_token}`
-
-Manifest membuat SatSet siap dipasang sebagai Home Screen web app, terutama untuk dukungan Web Push di iOS/iPadOS 16.4+.
-
-## Customer Routes
-
-- `GET /`
-- `GET /restaurants/{id}`
-- `GET /restaurants/{id}/recommendations`
-- `GET /restaurants/{id}/queue/new`
-- `POST /restaurants/{id}/queue`
-- `GET /queue/{ticket:public_token}`
-- `GET /queue/{ticket:public_token}/status`
-- `POST /queue/{ticket:public_token}/cancel`
-- `POST /queue/{ticket:public_token}/push-subscription`
-- `DELETE /queue/{ticket:public_token}/push-subscription`
-
-## Admin Routes
-
-- `GET /admin`
-- `GET /admin/login`
-- `POST /admin/login`
-- `POST /admin/logout`
-- `GET /admin/dashboard`
-- `GET /admin/queues`
-- `GET /admin/restaurants`
-- `GET /admin/restaurants/create`
-- `POST /admin/restaurants`
-- `GET /admin/restaurants/{id}/edit`
-- `PUT /admin/restaurants/{id}`
-- `DELETE /admin/restaurants/{id}`
-- `GET /admin/restaurants/{id}/queue`
-- `POST /admin/restaurants/{id}/queue/call-next`
-- `POST /admin/restaurants/{id}/queue/complete`
-- `POST /admin/restaurants/{id}/queue/skip`
-- `POST /admin/restaurants/{id}/queue/reset`
-- `POST /admin/restaurants/{id}/queue/{ticket}/cancel`
-
-## Notification Triggers
-
-Saat admin menjalankan `Panggil Berikutnya`, SatSet:
-
-- menandai ticket berikutnya sebagai `called`
-- mengirim `QueueCalledNotification` jika belum pernah terkirim
-- menghitung ulang posisi semua ticket `waiting`
-- mengirim `QueueAlmostTurnNotification` saat posisi tinggal 3
-- mengirim `QueueAlmostTurnNotification` saat posisi tinggal 1
-
-Timestamp anti-duplikasi:
-
-- `three_ahead_notified_at`
-- `one_ahead_notified_at`
-- `called_notified_at`
-
-Cancellation menggunakan `QueueCancelledNotification`.
-
-## Localhost Testing
-
-Jalankan:
+## Menjalankan aplikasi
 
 ```bash
 php artisan serve
 ```
 
-Buka:
+Biarkan terminal tetap terbuka (tekan **Ctrl + C** untuk berhenti), lalu buka:
 
-- Customer home: `http://127.0.0.1:8000`
-- Admin login: `http://127.0.0.1:8000/admin/login`
+| Halaman | Alamat |
+|---|---|
+| Beranda customer | http://localhost:8000 |
+| Halaman outlet (hasil scan QR) | http://localhost:8000/r/{slug-outlet} |
+| Admin | http://localhost:8000/admin |
 
-Manual demo:
+Slug outlet bisa dilihat di **Admin → QR Code**.
 
-1. Customer: buka `/`, pilih restoran, klik `Ambil Antrean`.
-2. Customer: di Active Queue klik `Aktifkan Notifikasi`, lalu allow permission.
-3. Admin: login, buka Queue Management restoran, klik `Panggil Berikutnya` beberapa kali.
-4. Customer menerima notification saat tinggal 3 antrean, tinggal 1 antrean, dan saat dipanggil.
-5. Klik notification membuka `/queue/{public_token}`.
+Jika WhatsApp sudah diaktifkan, jalankan juga worker di terminal kedua supaya pesan keluar terkirim:
 
-## Mobile Support
+```bash
+php artisan queue:work
+```
 
-- Android Chrome: Web Push didukung pada secure context.
-- Desktop Chrome/Edge: Web Push didukung pada secure context.
-- iPhone/iPad: Web Push berlaku untuk Home Screen web apps di iOS/iPadOS 16.4+. Tambahkan SatSet ke Home Screen, lalu minta permission dari app yang sudah terpasang.
+## Akses dari HP dengan scan QR
 
-Jangan mengasumsikan Safari iPhone biasa bekerja sama seperti Android browser tab.
+Cara ini dipakai untuk mencoba alur customer dari HP sungguhan: scan QR, lalu buka halaman outlet dan halaman tiket.
 
-## Troubleshooting Notification Permission
+**Syarat:** HP dan laptop terhubung ke **Wi-Fi yang sama**.
 
-- Jika browser menampilkan `Notifikasi diblokir`, customer tetap bisa memantau antrean dari Active Queue.
-- Jika tombol mengatakan browser belum mendukung push, gunakan Chrome/Edge terbaru.
-- Jika permission pernah ditolak, ubah izin site dari browser settings.
-- Jika notification tidak terkirim dari server, cek `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, dan pastikan PHP `ext-curl` aktif.
-- Setelah mengubah `.env`, jalankan `php artisan config:clear`.
+**1. Jalankan server untuk jaringan lokal** (menggantikan `php artisan serve`)
 
-## Testing
+```bash
+php artisan satset:lan
+```
+
+Perintah ini menampilkan alamat laptop di jaringan, misalnya:
+
+```text
+Admin QR : http://192.168.1.189:8000/admin/qr
+```
+
+**2. Buka alamat tersebut di browser laptop**, bukan `localhost`. Login sebagai admin, lalu klik **Lihat QR** pada outlet.
+
+Karena halaman admin dibuka lewat alamat jaringan, QR otomatis berisi alamat yang bisa dibuka HP (misalnya `http://192.168.1.189:8000/r/...`). File `.env` tidak perlu diubah.
+
+**3. Scan QR dengan kamera HP.** Halaman outlet akan terbuka di HP.
+
+**4. Kalau Windows menampilkan pop-up Firewall** saat server dijalankan, pilih **Allow** untuk jaringan **Private**. Kalau HP tetap tidak bisa membuka halaman, lihat [Masalah umum](#masalah-umum).
+
+> Catatan:
+> - Alamat jaringan laptop bisa berubah kalau Wi-Fi tersambung ulang. Jalankan `php artisan satset:lan` lagi untuk melihat alamat terbaru.
+> - QR yang memakai alamat jaringan hanya berlaku di Wi-Fi tersebut. Untuk QR yang dicetak dan ditempel di outlet, isi `APP_URL` dengan domain HTTPS (misalnya `https://satsetid.my.id`); QR akan selalu memakai `APP_URL` jika isinya bukan `localhost`.
+> - Untuk mengakses dari jaringan mana pun (misalnya data seluler), atau untuk menguji WhatsApp, gunakan tunnel. Lihat [Menghubungkan WhatsApp](#menghubungkan-whatsapp).
+
+## Akun admin dan peran
+
+| Peran | Akses |
+|---|---|
+| **Pemilik SatSet** | Semua outlet, tambah atau nonaktifkan restoran, kelola akun admin, log WhatsApp |
+| **Admin outlet** (kasir) | Hanya outlet yang dipilihkan: kelola antrean, QR, dan pengaturan outlet (kecuali nama, prefix, dan status aktif) |
+
+- Akun pemilik dibuat dengan `php artisan satset:admin`.
+- Akun kasir dibuat oleh pemilik di **Admin → Akun admin**. Setiap kasir sebaiknya punya akun sendiri. Satu akun boleh memegang beberapa outlet.
+- Kasir yang memegang satu outlet langsung diarahkan ke halaman antrean outletnya setelah login.
+- Akun yang dinonaktifkan tidak bisa login dan langsung keluar dari sesi yang sedang berjalan.
+
+## Mencoba chatbot tanpa WhatsApp
+
+Alur chatbot bisa disimulasikan dari terminal tanpa akun WhatsApp. Data akan masuk ke database lokal.
+
+```bash
+php artisan tinker
+```
+
+Tempel baris berikut (sekali saja). `$wa` mengirim pesan sebagai customer, `$inbox` menampilkan pesan yang diterima customer:
+
+```php
+$hp = '6281111111111'; $wa = function ($t) use ($hp) { app(App\Services\WhatsAppChatbotService::class)->receive(['id' => 'sim-'.uniqid(), 'from' => $hp, 'text' => ['body' => $t]]); echo App\Models\WhatsappLog::where('direction', 'outbound')->where('phone_number', $hp)->latest('id')->value('message'), "\n"; }; $inbox = function () use ($hp) { App\Models\WhatsappLog::where('direction', 'outbound')->where('phone_number', $hp)->oldest('id')->get()->each(fn ($m) => print("---\n{$m->message}\n")); };
+```
+
+Lalu chat seperti di WhatsApp (ganti slug sesuai outlet Anda):
+
+```php
+$wa('ANTRE ayam-bakar-nusantara-a');
+$wa('2');
+$wa('YA');
+```
+
+Setelah itu klik **Panggil berikutnya** di halaman antrean admin, lalu jalankan `$inbox();` untuk melihat notifikasi "tinggal 3 antrean", "tinggal 1 antrean", dan "giliran tiba". Untuk mensimulasikan customer lain, jalankan ulang baris `$hp = ...` dengan nomor berbeda.
+
+## Menghubungkan WhatsApp
+
+### 1. Buat alamat publik HTTPS (untuk development)
+
+Provider WhatsApp perlu mengirim pesan masuk (webhook) ke aplikasi Anda. Gunakan Cloudflare Tunnel:
+
+```bash
+cloudflared tunnel --url http://localhost:8000
+```
+
+Salin alamat `https://….trycloudflare.com` yang muncul, isi ke `APP_URL` di `.env`, lalu jalankan:
+
+```bash
+php artisan config:clear
+```
+
+Alamat tunnel berubah setiap kali `cloudflared` dijalankan ulang. Perbarui `APP_URL` dan URL webhook di provider setiap kali itu terjadi.
+
+### 2a. Twilio
+
+Isi `.env` (jangan pernah commit atau bagikan token):
+
+```env
+WHATSAPP_ENABLED=true
+WHATSAPP_PROVIDER=twilio
+WHATSAPP_PHONE_NUMBER=14155238886
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
+```
+
+- `WHATSAPP_PHONE_NUMBER` adalah nomor WhatsApp Twilio Anda (nomor sandbox atau nomor milik sendiri).
+- Di Twilio Console → Messaging → Try it out → Send a WhatsApp message → **Sandbox settings**, isi **"When a message comes in"** dengan `https://<alamat-tunnel>/webhooks/twilio` (method **POST**).
+- Status pengiriman (Terkirim, Sampai, Dibaca) otomatis dilaporkan ke `/webhooks/twilio/status` jika `APP_URL` memakai HTTPS.
+- Pada sandbox, setiap nomor penguji harus mengirim `join <kode-sandbox>` ke nomor Twilio terlebih dahulu.
+
+### 2b. Meta WhatsApp Cloud API
+
+```env
+WHATSAPP_ENABLED=true
+WHATSAPP_PROVIDER=meta
+WHATSAPP_PHONE_NUMBER=62...
+WHATSAPP_ACCESS_TOKEN=...
+WHATSAPP_PHONE_NUMBER_ID=...
+WHATSAPP_BUSINESS_ACCOUNT_ID=...
+WHATSAPP_APP_SECRET=...
+WHATSAPP_VERIFY_TOKEN=teks-acak-buatan-anda
+WHATSAPP_API_VERSION=v23.0
+```
+
+Webhook di Meta: `https://<alamat-tunnel>/webhooks/whatsapp`, dengan verify token yang sama, lalu subscribe ke field **messages**.
+
+### 3. Template notifikasi (opsional)
+
+Balasan chatbot bisa dikirim bebas karena customer chat terlebih dahulu. Notifikasi yang dikirim **lebih dari 24 jam** setelah pesan terakhir customer memerlukan template yang sudah disetujui. Dua variabel template diisi otomatis: `{{1}}` nomor antrean, `{{2}}` nama outlet.
+
+```env
+WHATSAPP_TEMPLATE_THREE_AHEAD=
+WHATSAPP_TEMPLATE_ONE_AHEAD=
+WHATSAPP_TEMPLATE_CALLED=
+WHATSAPP_TEMPLATE_CANCELLED=
+```
+
+Isi dengan **Content SID** (`HX...`) untuk Twilio, atau **nama template** untuk Meta.
+
+### 4. Jalankan
+
+Gunakan tiga terminal: `php artisan serve`, `php artisan queue:work`, dan `cloudflared tunnel --url http://localhost:8000`. Semua pesan masuk dan keluar bisa dipantau di **Admin → Log WhatsApp**.
+
+## Test otomatis
 
 ```bash
 php artisan test
 ```
 
-Test mencakup:
+Test memakai database SQLite in-memory dan API WhatsApp tiruan, jadi database lokal tidak tersentuh dan tidak ada pesan yang benar-benar terkirim. Cakupannya meliputi alur chatbot, penomoran antrean dan estimasi waktu, notifikasi, Twilio dan Meta (termasuk verifikasi signature), serta pembagian akses pemilik dan admin outlet.
 
-- Customer dapat membuat queue ticket tanpa login
-- Queue number generated correctly
-- Estimated waiting time correctly calculated
-- Admin can call next customer
-- Cancelled customer tidak lagi masuk active queue
-- Recommendation memilih restoran kategori sama dengan waktu lebih pendek
-- Push subscription dapat disimpan
-- Invalid public token ditolak
-- Notification tinggal 3 antrean hanya ditandai/terkirim sekali
-- Notification tinggal 1 antrean hanya ditandai/terkirim sekali
-- Called notification hanya ditandai/terkirim sekali
-- Refresh Active Queue tidak membuat ticket baru
+## Masalah umum
 
-## Database Tables
-
-- `users`
-- `restaurants`
-- `queue_tickets`
-- `push_subscriptions`
-- tabel bawaan Laravel untuk sessions, cache, jobs, password reset
-
-## Notes
-
-Project ini tidak memakai React, Next.js, Vue, Redis, Docker, atau WebSocket. Active Queue memakai AJAX polling setiap 7 detik dari halaman tiket digital.
+| Masalah | Solusi |
+|---|---|
+| `Access denied for user 'root'` | `DB_PASSWORD` di `.env` salah |
+| `Unknown database 'satset'` | Database belum dibuat (lihat langkah 3 instalasi) |
+| `No connection could be made` | MySQL belum berjalan. Start service MySQL atau XAMPP |
+| Perubahan `.env` tidak berpengaruh | Jalankan `php artisan config:clear` |
+| Tampilan terlihat lama setelah update | Tekan **Ctrl + F5** di browser |
+| HP tidak bisa membuka halaman saat scan QR | Pastikan Wi-Fi sama dan server dijalankan dengan `php artisan satset:lan`. Izinkan PHP di Windows Firewall (Private). Beberapa Wi-Fi publik atau kampus memblokir koneksi antar perangkat; coba hotspot HP |
+| QR masih berisi `localhost` | Halaman admin dibuka lewat `localhost`. Buka lewat alamat jaringan dari `php artisan satset:lan` |
+| Tombol "Lanjut via WhatsApp" abu-abu | WhatsApp belum aktif atau konfigurasinya belum lengkap (lihat bagian WhatsApp) |
+| Pesan WhatsApp berstatus "Menunggu kirim" | `php artisan queue:work` belum dijalankan |
+| Webhook Twilio mendapat 403 | `APP_URL` tidak sama dengan alamat tunnel, atau `config:clear` belum dijalankan |

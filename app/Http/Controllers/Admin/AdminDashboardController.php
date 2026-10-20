@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\QueueTicket;
 use App\Models\Restaurant;
 use App\Services\QueueService;
+use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
 {
-    public function __invoke(QueueService $queueService)
+    public function __invoke(Request $request, QueueService $queueService)
     {
-        $restaurants = Restaurant::query()
+        $restaurants = $request->user()->accessibleRestaurants()
             ->orderBy('name')
             ->get()
             ->map(function (Restaurant $restaurant) use ($queueService): Restaurant {
@@ -22,7 +23,9 @@ class AdminDashboardController extends Controller
                 return $restaurant;
             });
 
-        $completedToday = QueueTicket::query()
+        $tickets = fn () => QueueTicket::query()->whereIn('restaurant_id', $restaurants->modelKeys());
+
+        $completedToday = $tickets()
             ->where('status', QueueTicket::STATUS_COMPLETED)
             ->whereDate('completed_at', today())
             ->whereNotNull('called_at')
@@ -32,9 +35,9 @@ class AdminDashboardController extends Controller
 
         return view('admin.dashboard', [
             'restaurants' => $restaurants,
-            'totalRestaurants' => Restaurant::query()->count(),
-            'activeQueue' => QueueTicket::query()->whereIn('status', [QueueTicket::STATUS_WAITING, QueueTicket::STATUS_CALLED])->count(),
-            'customersToday' => QueueTicket::query()->whereDate('joined_at', today())->sum('party_size'),
+            'totalRestaurants' => $restaurants->count(),
+            'activeQueue' => $tickets()->whereIn('status', [QueueTicket::STATUS_WAITING, QueueTicket::STATUS_CALLED])->count(),
+            'customersToday' => $tickets()->whereDate('joined_at', today())->sum('party_size'),
             'averageWaiting' => $averageWaiting,
         ]);
     }

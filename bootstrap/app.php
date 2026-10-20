@@ -14,8 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn () => route('admin.login'));
 
+        $middleware->alias([
+            'admin.active' => \App\Http\Middleware\EnsureAdminIsActive::class,
+        ]);
+
         $middleware->validateCsrfTokens(except: [
             'webhooks/whatsapp',
+            'webhooks/twilio',
+            'webhooks/twilio/status',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

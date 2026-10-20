@@ -1,28 +1,23 @@
 <x-layouts.customer title="SatSet | Virtual Queue for F&B">
     <section class="home-hero">
-        <div class="hero-content">
-            <p class="eyebrow">VIRTUAL QUEUE FOR F&amp;B</p>
-            <h1>SatSet<span class="accent">.</span></h1>
-            <p class="hero-title">Antre tanpa harus<br>berdiri menunggu.</p>
-            <p class="hero-description">Scan QR di tempat makan favorit Anda. Daftar dan tunggu kabar giliran lewat WhatsApp.</p>
-            <a class="button button-green" href="#outlets">Temukan tempat makan <span aria-hidden="true">&darr;</span></a>
-            <div class="hero-notes"><span>Tanpa akun</span><span>Tanpa install aplikasi</span></div>
+        <div class="home-hero-inner">
+            <p class="eyebrow eyebrow-light">Virtual queue untuk F&amp;B</p>
+            <h1>Antre tanpa harus berdiri menunggu.</h1>
+            <p class="home-hero-text">Scan QR SatSet di outlet untuk langsung masuk antrean. Kabar giliran dikirim lewat WhatsApp.</p>
+            <ul class="hero-points">
+                <li>Tanpa akun</li>
+                <li>Tanpa install aplikasi</li>
+            </ul>
         </div>
     </section>
-    <section class="content-shell outlet-directory" id="outlets">
-        <div class="section-heading"><div><p class="eyebrow">PILIH TEMPATNYA</p><h2>Selera Anda. Waktu Anda.</h2></div><span>{{ $restaurants->count() }} outlet tersedia</span></div>
-        <form class="search-form" action="{{ route('home') }}#outlets" method="get" role="search">
-            <label class="sr-only" for="outlet-search">Cari nama outlet atau menu</label>
-            <input id="outlet-search" type="search" name="q" value="{{ $search }}" placeholder="Cari restoran, cafe, atau makanan..." autocomplete="off">
-            <button class="button button-dark" type="submit">Cari</button>
-            @if($search)<a class="text-link" href="{{ route('home') }}#outlets">Reset</a>@endif
-        </form>
-        <div class="restaurant-grid">
-            @forelse($restaurants as $restaurant)
-                <x-customer.outlet-card :restaurant="$restaurant" />
-            @empty
-                <div class="empty-state"><h3>Belum ada outlet yang cocok</h3><p>Coba nama tempat atau jenis makanan lainnya.</p></div>
-            @endforelse
-        </div>
+
+    <section class="page page-wide">
+        <p class="eyebrow">Cara antre</p>
+        <h2 class="section-title">Tiga langkah, tanpa berdiri.</h2>
+        <ol class="steps steps-row">
+            <li><span class="step-number">1</span><div><strong>Scan QR di outlet</strong><span>Cari QR SatSet di kasir atau pintu masuk.</span></div></li>
+            <li><span class="step-number">2</span><div><strong>Lanjutkan di WhatsApp</strong><span>Pilih jumlah tamu dan konfirmasi antrean Anda.</span></div></li>
+            <li><span class="step-number">3</span><div><strong>Nikmati waktu Anda</strong><span>Kami kabari saat giliran sudah dekat.</span></div></li>
+        </ol>
     </section>
 </x-layouts.customer>

@@ -1,38 +1,3 @@
-document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-back-button]');
-
-    if (!button) {
-        return;
-    }
-
-    const fallbackUrl = button.dataset.fallbackUrl || '/';
-
-    let referrer = null;
-    try {
-        referrer = document.referrer ? new URL(document.referrer) : null;
-    } catch (error) {
-        referrer = null;
-    }
-
-    let fallback = '/';
-    try {
-        fallback = new URL(fallbackUrl, window.location.origin);
-    } catch (error) {
-        fallback = new URL('/', window.location.origin);
-    }
-
-    const cameFromSameSite = referrer && referrer.origin === window.location.origin;
-    const cameFromCustomer = cameFromSameSite && !referrer.pathname.startsWith('/admin');
-    const fallbackIsCustomer = fallback.origin === window.location.origin && !fallback.pathname.startsWith('/admin');
-
-    if (window.history.length > 1 && cameFromCustomer) {
-        window.history.back();
-        return;
-    }
-
-    window.location.href = fallbackIsCustomer ? fallback.href : '/';
-});
-
 // Remove the previous installation's worker without registering a new one.
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -58,7 +23,8 @@ if (outlet) {
             outlet.querySelector('[data-outlet-estimate]').textContent = data.estimated_wait;
             const status = outlet.querySelector('[data-outlet-availability]');
             status.textContent = data.available ? 'Antrean sedang dibuka' : 'Antrean sedang ditutup';
-            status.classList.toggle('closed', !data.available);
+            status.classList.toggle('pill-open', data.available);
+            status.classList.toggle('pill-closed', !data.available);
             outlet.querySelector('[data-outlet-cta]')?.toggleAttribute('hidden', !data.available);
             outlet.querySelector('[data-outlet-closed]')?.toggleAttribute('hidden', data.available);
             outlet.querySelector('[data-live-note]').textContent = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}) + '. Estimasi dapat berubah.';

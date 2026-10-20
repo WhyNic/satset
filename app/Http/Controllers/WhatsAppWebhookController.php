@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use App\Models\WhatsappLog;
 use App\Services\WhatsAppChatbotService;
 use App\Services\WhatsAppService;
 
@@ -22,7 +21,7 @@ class WhatsAppWebhookController extends Controller
     public function receive(Request $request, WhatsAppChatbotService $chatbot, WhatsAppService $whatsapp): Response
     {
         $secret = (string) config('whatsapp.app_secret');
-        abort_unless(config('whatsapp.enabled') && $secret !== '' && filled(config('whatsapp.phone_number_id')), 503);
+        abort_unless(config('whatsapp.enabled') && $whatsapp->provider() === 'meta' && $secret !== '' && filled(config('whatsapp.phone_number_id')), 503);
         abort_if(strlen($request->getContent()) > 1048576, 413);
         $signature = 'sha256='.hash_hmac('sha256', $request->getContent(), $secret);
         abort_unless(hash_equals($signature, (string) $request->header('X-Hub-Signature-256')), 403);
@@ -41,21 +40,7 @@ class WhatsAppWebhookController extends Controller
                     $chatbot->receive($message);
                 }
                 foreach ($value['statuses'] ?? [] as $status) {
-                    $delivery = $status['status'] ?? '';
-                    $allowedPrevious = match ($delivery) {
-                        'delivered' => ['sent'],
-                        'read' => ['sent', 'delivered'],
-                        'failed' => ['sent'],
-                        default => [],
-                    };
-                    if ($allowedPrevious !== []) {
-                        WhatsappLog::query()->where('direction', 'outbound')
-                            ->where('provider_message_id', $status['id'] ?? '')
-                            ->whereIn('status', $allowedPrevious)->update([
-                                'status' => $delivery,
-                                'error_code' => $delivery === 'failed' ? 'provider_delivery_failed' : null,
-                            ]);
-                    }
+                    $whatsapp->applyDeliveryStatus((string) ($status['id'] ?? ''), (string) ($status['status'] ?? ''));
                 }
             }
         }

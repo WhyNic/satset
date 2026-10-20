@@ -1,38 +1,32 @@
-<x-layouts.admin title="Admin Dashboard - SatSet">
-    <section class="admin-page-header">
+<x-layouts.admin title="Dashboard | SatSet Admin">
+    <header class="admin-page-header">
         <div>
-            <p class="admin-kicker">Dashboard SatSet</p>
-            <h1>Ringkasan operasional</h1>
+            <h1>{{ auth()->user()->isOwner() ? 'Dashboard' : 'Outlet saya' }}</h1>
+            <p>Ringkasan operasional hari ini, {{ now()->translatedFormat('d M Y') }}.</p>
         </div>
-        <a class="admin-secondary-button" href="{{ route('admin.restaurants.create') }}">Tambah Restoran</a>
-    </section>
+        @can('owner')
+            <a class="admin-button admin-button-secondary" href="{{ route('admin.restaurants.create') }}">Tambah restoran</a>
+        @endcan
+    </header>
 
-    <section class="admin-stat-grid">
-        <article>
-            <span>Total Restoran</span>
-            <strong>{{ $totalRestaurants }}</strong>
-        </article>
-        <article>
-            <span>Antrean Aktif</span>
-            <strong>{{ $activeQueue }}</strong>
-        </article>
-        <article>
-            <span>Tamu Hari Ini</span>
-            <strong>{{ $customersToday }}</strong>
-        </article>
-        <article>
-            <span>Rata-rata Tunggu</span>
-            <strong>{{ $averageWaiting }} menit</strong>
-        </article>
+    @if (! auth()->user()->isOwner() && $restaurants->isEmpty())
+        <div class="admin-notice admin-notice-warning">Akun Anda belum terhubung ke outlet mana pun. Hubungi pemilik SatSet untuk mendapatkan akses.</div>
+    @endif
+
+    <section class="admin-stats">
+        <article><span>Total restoran</span><strong>{{ $totalRestaurants }}</strong></article>
+        <article><span>Antrean aktif</span><strong>{{ $activeQueue }}</strong></article>
+        <article><span>Tamu hari ini</span><strong>{{ $customersToday }}</strong></article>
+        <article><span>Rata-rata tunggu</span><strong>{{ $averageWaiting }} <small>menit</small></strong></article>
     </section>
 
     <section class="admin-panel">
         <div class="admin-panel-heading">
             <div>
-                <h2>Status Restoran</h2>
-                <p>Kondisi antrean seluruh outlet.</p>
+                <h2>Status restoran</h2>
+                <p>Kondisi antrean di setiap outlet.</p>
             </div>
-            <a href="{{ route('admin.queues.index') }}">Lihat semua antrean</a>
+            <a class="admin-link" href="{{ route('admin.queues.index') }}">Lihat semua antrean</a>
         </div>
 
         <div class="admin-table-wrap">
@@ -40,28 +34,27 @@
                 <thead>
                     <tr>
                         <th>Restoran</th>
-                        <th>Status</th>
-                        <th>Sedang Dilayani</th>
-                        <th>Jumlah Menunggu</th>
-                        <th>Estimasi Tunggu</th>
-                        <th>Action</th>
+                        <th>Pendaftaran</th>
+                        <th>Sedang dilayani</th>
+                        <th>Menunggu</th>
+                        <th>Estimasi tunggu</th>
+                        <th class="admin-cell-action"><span class="sr-only">Aksi</span></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($restaurants as $restaurant)
+                    @forelse ($restaurants as $restaurant)
                         @php($snapshot = $restaurant->getAttribute('queue_snapshot'))
                         <tr>
-                            <td>
-                                <strong>{{ $restaurant->name }}</strong>
-                                <span>{{ $restaurant->category }}</span>
-                            </td>
-                            <td><span class="admin-status {{ $snapshot['available'] ? 'admin-status-waiting' : 'admin-status-cancelled' }}">{{ $snapshot['available'] ? 'Dibuka' : 'Ditutup' }}</span></td>
-                            <td>{{ $restaurant->getAttribute('current_number') ?? '-' }}</td>
+                            <td><strong>{{ $restaurant->name }}</strong><span class="admin-sub">{{ $restaurant->category }}</span></td>
+                            <td><span @class(['admin-badge', 'admin-badge-green' => $snapshot['available'], 'admin-badge-amber' => ! $snapshot['available']])>{{ $snapshot['available'] ? 'Dibuka' : 'Ditutup' }}</span></td>
+                            <td class="admin-mono">{{ $restaurant->getAttribute('current_number') ?? '–' }}</td>
                             <td>{{ $restaurant->getAttribute('waiting_count') }} kelompok</td>
                             <td>{{ $snapshot['estimated_wait'] }} menit</td>
-                            <td><a class="admin-table-action" href="{{ route('admin.restaurants.queue', $restaurant) }}">Kelola Antrean</a></td>
+                            <td class="admin-cell-action"><a class="admin-button admin-button-small" href="{{ route('admin.restaurants.queue', $restaurant) }}">Kelola antrean</a></td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="6" class="admin-empty">Belum ada restoran.@can('owner') <a class="admin-link" href="{{ route('admin.restaurants.create') }}">Tambah restoran pertama</a>.@endcan</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

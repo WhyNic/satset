@@ -32,5 +32,17 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Keep tests independent of the developer's local WhatsApp settings. -->
+        <env name="APP_URL" value="http://localhost" force="true"/>
+        <env name="WHATSAPP_ENABLED" value="false" force="true"/>
+        <env name="WHATSAPP_PROVIDER" value="meta" force="true"/>
+        <env name="WHATSAPP_PHONE_NUMBER" value="" force="true"/>
+        <env name="WHATSAPP_ACCESS_TOKEN" value="" force="true"/>
+        <env name="WHATSAPP_PHONE_NUMBER_ID" value="" force="true"/>
+        <env name="WHATSAPP_BUSINESS_ACCOUNT_ID" value="" force="true"/>
+        <env name="WHATSAPP_APP_SECRET" value="" force="true"/>
+        <env name="WHATSAPP_VERIFY_TOKEN" value="" force="true"/>
+        <env name="TWILIO_ACCOUNT_SID" value="" force="true"/>
+        <env name="TWILIO_AUTH_TOKEN" value="" force="true"/>
     </php>
 </phpunit>

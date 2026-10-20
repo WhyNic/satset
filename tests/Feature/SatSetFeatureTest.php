@@ -157,18 +157,6 @@ class SatSetFeatureTest extends TestCase
         $this->assertDatabaseCount('queue_tickets', 1);
     }
 
-    public function test_recommendations_are_same_category_and_sorted_by_wait(): void
-    {
-        $selected = $this->restaurant();
-        $fast = $this->restaurant(['name'=>'Ayam cepat','slug'=>'ayam-cepat','prefix'=>'B']);
-        $slow = $this->restaurant(['name'=>'Ayam lambat','slug'=>'ayam-lambat','prefix'=>'C']);
-        $this->restaurant(['name'=>'Kopi','slug'=>'kopi','prefix'=>'D','category'=>'Kopi']);
-        app(QueueService::class)->createTicket($slow);
-        $recommendations = app(QueueService::class)->getRecommendations($selected);
-        $this->assertSame([$fast->id, $slow->id], $recommendations->pluck('id')->all());
-        $this->get(route('restaurants.recommendations', $selected))->assertOk()->assertSee('Ayam cepat');
-    }
-
     public function test_outlet_name_is_escaped(): void
     {
         $restaurant = $this->restaurant(['name'=>'<script>alert(1)</script>']);

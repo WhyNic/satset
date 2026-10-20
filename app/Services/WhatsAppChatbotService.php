@@ -145,8 +145,9 @@ class WhatsAppChatbotService
         $ticket->loadMissing('restaurant');
         $ahead = max(0, $this->queue->calculateCustomerPosition($ticket) - 1);
         $estimate = $this->queue->calculateEstimatedWait($ticket->restaurant, $ticket);
-        $url = route('queue.show', ['ticket' => $ticket->public_token]);
+        // Built from APP_URL, not the webhook request host: behind a tunnel or proxy that host is not reachable by customers.
+        $url = rtrim(config('app.url'), '/').route('queue.show', ['ticket' => $ticket->public_token], false);
 
-        return "{$heading}\n\n{$ticket->restaurant->name}\nNomor: {$ticket->queue_number}\nJumlah tamu: {$ticket->party_size} orang\nStatus: {$ticket->status}\n{$ahead} antrean di depan Anda\nEstimasi: +/-{$estimate} menit\n\nLihat antrean: {$url}";
+        return "{$heading}\n\n{$ticket->restaurant->name}\nNomor: {$ticket->queue_number}\nJumlah tamu: {$ticket->party_size} orang\nStatus: {$ticket->statusLabel()}\n{$ahead} antrean di depan Anda\nEstimasi: +/-{$estimate} menit\n\nLihat antrean: {$url}";
     }
 }

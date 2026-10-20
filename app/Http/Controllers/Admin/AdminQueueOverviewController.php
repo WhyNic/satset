@@ -15,6 +15,7 @@ class AdminQueueOverviewController extends Controller
 
         $tickets = QueueTicket::query()
             ->with('restaurant')
+            ->whereIn('restaurant_id', $request->user()->accessibleRestaurants()->select('id'))
             ->when(in_array($status, ['waiting', 'called', 'completed', 'cancelled', 'skipped'], true), function ($query) use ($status): void {
                 $query->where('status', $status);
             })
