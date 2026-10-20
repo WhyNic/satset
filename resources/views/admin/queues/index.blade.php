@@ -2,8 +2,8 @@
     <section class="admin-page-header">
         <div>
             <p class="admin-kicker">Admin Queue Overview</p>
-            <h1>Semua queue ticket terbaru.</h1>
-            <p>Filter berdasarkan status atau cari nomor antrean dan nama customer.</p>
+            <h1>Seluruh antrean</h1>
+            <p>Riwayat kelompok dan antrean aktif dari seluruh outlet.</p>
         </div>
     </section>
 
@@ -24,8 +24,8 @@
                     <tr>
                         <th>Nomor</th>
                         <th>Restoran</th>
-                        <th>Customer</th>
-                        <th>Push Notification</th>
+                        <th>Jumlah Tamu</th>
+                        <th>WhatsApp</th>
                         <th>Waktu Masuk</th>
                         <th>Status</th>
                     </tr>
@@ -35,12 +35,8 @@
                         <tr>
                             <td><strong>{{ $ticket->queue_number }}</strong></td>
                             <td>{{ $ticket->restaurant?->name ?? '-' }}</td>
-                            <td>{{ $ticket->customer_name }}</td>
-                            <td>
-                                <span class="admin-status {{ $ticket->push_subscriptions_count > 0 ? 'admin-status-push-active' : 'admin-status-push-inactive' }}">
-                                    {{ $ticket->push_subscriptions_count > 0 ? 'Active' : 'Not Active' }}
-                                </span>
-                            </td>
+                            <td>{{ $ticket->party_size }} orang</td>
+                            <td>{{ $ticket->phone_number ?? 'Tidak tersedia' }}</td>
                             <td>{{ $ticket->joined_at?->format('d M H:i') ?? '-' }}</td>
                             <td><span class="admin-status admin-status-{{ $ticket->status }}">{{ ucfirst($ticket->status) }}</span></td>
                         </tr>

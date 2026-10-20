@@ -15,7 +15,6 @@ class AdminQueueOverviewController extends Controller
 
         $tickets = QueueTicket::query()
             ->with('restaurant')
-            ->withCount('pushSubscriptions')
             ->when(in_array($status, ['waiting', 'called', 'completed', 'cancelled', 'skipped'], true), function ($query) use ($status): void {
                 $query->where('status', $status);
             })

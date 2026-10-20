@@ -20,6 +20,8 @@ class Restaurant extends Model
         'average_service_minutes',
         'max_wait_minutes',
         'active',
+        'max_party_size',
+        'queue_open',
     ];
 
     protected function casts(): array
@@ -28,6 +30,8 @@ class Restaurant extends Model
             'average_service_minutes' => 'integer',
             'max_wait_minutes' => 'integer',
             'active' => 'boolean',
+            'queue_open' => 'boolean',
+            'max_party_size' => 'integer',
         ];
     }
 

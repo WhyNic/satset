@@ -1,56 +1,25 @@
-const ticket = document.querySelector('[data-status-url]');
-
-if (ticket) {
-    const statusUrl = ticket.dataset.statusUrl;
-    const statusLabel = document.querySelector('[data-ticket-status]');
-    const position = document.querySelector('[data-ticket-position]');
-    const before = document.querySelector('[data-ticket-before]');
-    const estimate = document.querySelector('[data-ticket-estimate]');
-    const progress = document.querySelector('[data-ticket-progress]');
-    const labelForStatus = (status, position) => {
-        if (status === 'waiting') {
-            return position > 0 && position <= 3 ? 'Hampir Giliran' : 'Menunggu';
-        }
-
-        const labels = {
-            called: 'Dipanggil',
-            completed: 'Selesai',
-            cancelled: 'Dibatalkan',
-            skipped: 'Dilewati',
-        };
-
-        return labels[status] || `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
-    };
-
-    const render = (data) => {
-        if (statusLabel) {
-            statusLabel.textContent = `Status: ${labelForStatus(data.status, data.position)}`;
-        }
-        if (position) {
-            position.textContent = `Posisi ${data.position || '-'}`;
-        }
-        if (before) {
-            before.textContent = data.people_before;
-        }
-        if (estimate) {
-            estimate.textContent = data.estimated_wait;
-        }
-        if (progress) {
-            progress.style.width = data.position > 0 ? `${Math.max(10, Math.min(100, 100 - ((data.position - 1) * 12)))}%` : '100%';
-        }
-        if (data.status === 'called' || data.status === 'cancelled' || data.status === 'completed') {
-            window.location.reload();
-        }
-    };
-
-    window.setInterval(async () => {
+const ticketPanel = document.querySelector('[data-status-url]');
+if (ticketPanel) {
+    const labels = {waiting: 'Menunggu', called: 'Giliran Anda', completed: 'Selesai', cancelled: 'Dibatalkan', skipped: 'Dilewati'};
+    const pollTicket = async () => {
+        if (document.hidden) return;
         try {
-            const response = await fetch(statusUrl, { headers: { Accept: 'application/json' } });
-            if (response.ok) {
-                render(await response.json());
-            }
-        } catch (error) {
-            console.warn('Queue polling failed', error);
+            const response = await fetch(ticketPanel.dataset.statusUrl, {headers: {Accept: 'application/json'}, cache: 'no-store'});
+            if (!response.ok) throw new Error('Unavailable');
+            const data = await response.json();
+            document.querySelector('[data-ticket-status]').textContent = labels[data.status] || data.status;
+            document.querySelector('[data-ticket-before]').textContent = data.people_before;
+            document.querySelector('[data-ticket-estimate]').textContent = data.estimated_wait;
+            const active = ['waiting', 'called'].includes(data.status);
+            document.querySelector('[data-ticket-cancel]')?.toggleAttribute('hidden', !active);
+            document.querySelector('[data-ticket-message]').textContent = data.status === 'called'
+                ? 'Giliran Anda sudah tiba. Silakan menuju staf outlet.'
+                : active ? 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui WhatsApp.' : 'Antrean ini sudah berakhir. Terima kasih sudah menggunakan SatSet.';
+            document.querySelector('[data-live-note]').textContent = 'Terakhir diperbarui ' + new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'});
+        } catch {
+            document.querySelector('[data-live-note]').textContent = 'Belum dapat memperbarui antrean. Mencoba kembali...';
         }
-    }, 7000);
+    };
+    window.setInterval(pollTicket, 10000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) pollTicket(); });
 }

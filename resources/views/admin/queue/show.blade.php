@@ -23,20 +23,20 @@
         </article>
         <article>
             <span>Status restoran</span>
-            <strong>{{ $restaurant->active ? 'Active' : 'Disabled' }}</strong>
+            <strong>{{ $restaurant->active && $restaurant->queue_open ? 'Dibuka' : 'Ditutup' }}</strong>
         </article>
     </section>
 
     <section class="admin-panel">
         <div class="admin-panel-heading">
             <div>
-                <h2>Control Antrean</h2>
-                <p>Gunakan action ini untuk customer yang sedang dilayani atau waiting paling awal.</p>
+                <h2>Operasional antrean</h2>
+                <p>{{ $current ? 'Selesaikan atau lewati antrean saat ini sebelum memanggil berikutnya.' : 'Siap memanggil kelompok berikutnya.' }}</p>
             </div>
             <div class="admin-actions">
-                <form method="post" action="{{ route('admin.restaurants.queue.call-next', $restaurant) }}">@csrf<button class="admin-primary-button" type="submit">Panggil Berikutnya</button></form>
-                <form method="post" action="{{ route('admin.restaurants.queue.complete', $restaurant) }}">@csrf<button class="admin-secondary-button" type="submit">Tandai Selesai</button></form>
-                <form method="post" action="{{ route('admin.restaurants.queue.skip', $restaurant) }}">@csrf<button class="admin-warning-button" type="submit">Lewati</button></form>
+                <form method="post" action="{{ route('admin.restaurants.queue.call-next', $restaurant) }}">@csrf<button class="admin-primary-button" type="submit" @disabled($current || $waiting->isEmpty())>Panggil Berikutnya</button></form>
+                <form method="post" action="{{ route('admin.restaurants.queue.complete', $restaurant) }}">@csrf<button class="admin-secondary-button" type="submit" @disabled(!$current)>Tandai Selesai</button></form>
+                <form method="post" action="{{ route('admin.restaurants.queue.skip', $restaurant) }}">@csrf<button class="admin-warning-button" type="submit" @disabled(!$current)>Lewati</button></form>
             </div>
         </div>
     </section>
@@ -44,8 +44,8 @@
     <section class="admin-panel">
         <div class="admin-panel-heading">
             <div>
-                <h2>Active Queue</h2>
-                <p>Daftar antrean called dan waiting untuk restoran ini.</p>
+                <h2>Antrean aktif</h2>
+                <p>Satu nomor antrean untuk satu kelompok.</p>
             </div>
         </div>
 
@@ -54,9 +54,10 @@
                 <thead>
                     <tr>
                         <th>Nomor</th>
+                        <th>Jumlah Tamu</th>
+                        <th>WhatsApp</th>
                         <th>Waktu Masuk</th>
                         <th>Status</th>
-                        <th>Push Notification</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -64,13 +65,10 @@
                     @forelse ($activeTickets as $ticket)
                         <tr>
                             <td><strong>{{ $ticket->queue_number }}</strong></td>
+                            <td>{{ $ticket->party_size }} orang</td>
+                            <td>{{ $ticket->phone_number ?? 'Tidak tersedia' }}</td>
                             <td>{{ $ticket->joined_at?->format('H:i') ?? '-' }}</td>
                             <td><span class="admin-status admin-status-{{ $ticket->status }}">{{ ucfirst($ticket->status) }}</span></td>
-                            <td>
-                                <span class="admin-status {{ $ticket->push_subscriptions_count > 0 ? 'admin-status-push-active' : 'admin-status-push-inactive' }}">
-                                    {{ $ticket->push_subscriptions_count > 0 ? 'Active' : 'Not Active' }}
-                                </span>
-                            </td>
                             <td class="admin-inline-actions">
                                 @if ($ticket->status === 'called')
                                     <form method="post" action="{{ route('admin.restaurants.queue.complete', $restaurant) }}">
@@ -81,22 +79,23 @@
                                         @csrf
                                         <button class="admin-warning-link" type="submit">Lewati</button>
                                     </form>
-                                @elseif ($ticket->status === 'waiting')
+                                @endif
+                                @if ($ticket->status === 'waiting')
                                     @if (! $current && $waiting->first()?->is($ticket))
                                         <form method="post" action="{{ route('admin.restaurants.queue.call-next', $restaurant) }}">
                                             @csrf
                                             <button class="admin-table-action" type="submit">Panggil</button>
                                         </form>
                                     @endif
+                                @endif
                                     <form method="post" action="{{ route('admin.restaurants.queue.cancel', [$restaurant, $ticket]) }}" onsubmit="return confirm('Batalkan antrean ini?')">
                                         @csrf
                                         <button class="admin-danger-link" type="submit">Batalkan</button>
                                     </form>
-                                @endif
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">Belum ada antrean aktif.</td></tr>
+                        <tr><td colspan="6">Belum ada antrean aktif.</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use NotificationChannels\WebPush\PushSubscription;
 
 return new class extends Migration
 {
@@ -12,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $connection = config('webpush.database_connection');
-        $table = config('webpush.table_name');
+        $connection = null;
+        $table = 'push_subscriptions';
 
         Schema::connection($connection)->table($table, function (Blueprint $blueprint): void {
             $blueprint->dropUnique(['endpoint']);
         });
 
         Schema::connection($connection)->table($table, function (Blueprint $blueprint): void {
-            $blueprint->string('endpoint', PushSubscription::ENDPOINT_MAX_LENGTH)
+            $blueprint->string('endpoint', 2048)
                 ->charset('ascii')
                 ->unique()
                 ->change();
@@ -32,8 +31,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        $connection = config('webpush.database_connection');
-        $table = config('webpush.table_name');
+        $connection = null;
+        $table = 'push_subscriptions';
 
         Schema::connection($connection)->table($table, function (Blueprint $blueprint): void {
             $blueprint->dropUnique(['endpoint']);

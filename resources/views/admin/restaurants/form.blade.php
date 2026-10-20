@@ -2,8 +2,8 @@
     <section class="admin-page-header">
         <div>
             <p class="admin-kicker">Restaurant Management</p>
-            <h1>{{ $restaurant->exists ? 'Edit restaurant' : 'Create restaurant' }}</h1>
-            <p>Atur data tenant, prefix nomor antrean, dan threshold estimasi tunggu.</p>
+            <h1>{{ $restaurant->exists ? 'Edit restoran' : 'Tambah restoran' }}</h1>
+            <p>Pengaturan outlet dan pendaftaran antrean.</p>
         </div>
         <a class="admin-secondary-button" href="{{ route('admin.restaurants.index') }}">Kembali</a>
     </section>
@@ -26,7 +26,11 @@
                 <label>Average Service Time <input type="number" name="average_service_minutes" min="1" value="{{ old('average_service_minutes', $restaurant->average_service_minutes ?? 5) }}" required>@error('average_service_minutes')<small>{{ $message }}</small>@enderror</label>
                 <label>Max Wait Time <input type="number" name="max_wait_minutes" min="1" value="{{ old('max_wait_minutes', $restaurant->max_wait_minutes ?? 30) }}" required>@error('max_wait_minutes')<small>{{ $message }}</small>@enderror</label>
             </div>
+            <input type="hidden" name="active" value="0">
             <label class="admin-checkbox"><input type="checkbox" name="active" value="1" @checked(old('active', $restaurant->active ?? true))> Active</label>
+            <label>Jumlah tamu maksimal per kelompok <input type="number" name="max_party_size" min="1" max="100" value="{{ old('max_party_size', $restaurant->max_party_size ?? 6) }}" required>@error('max_party_size')<small>{{ $message }}</small>@enderror</label>
+            <input type="hidden" name="queue_open" value="0">
+            <label class="admin-checkbox"><input type="checkbox" name="queue_open" value="1" @checked(old('queue_open', $restaurant->queue_open ?? true))> Buka pendaftaran antrean</label>
             <button class="admin-primary-button" type="submit">Simpan</button>
         </form>
     </section>

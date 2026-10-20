@@ -5,15 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
-use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class QueueTicket extends Model
 {
     use HasFactory;
-    use HasPushSubscriptions;
-    use Notifiable;
 
     public const STATUS_WAITING = 'waiting';
     public const STATUS_CALLED = 'called';
@@ -26,6 +22,7 @@ class QueueTicket extends Model
         'restaurant_id',
         'customer_name',
         'phone_number',
+        'party_size',
         'queue_number',
         'sequence_number',
         'status',
@@ -50,6 +47,7 @@ class QueueTicket extends Model
     {
         return [
             'sequence_number' => 'integer',
+            'party_size' => 'integer',
             'joined_at' => 'datetime',
             'called_at' => 'datetime',
             'completed_at' => 'datetime',

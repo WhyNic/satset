@@ -45,7 +45,7 @@ class RestaurantSeeder extends Seeder
             $sampleQueue = $data['sample_queue'];
             unset($data['sample_queue']);
 
-            $restaurant = Restaurant::query()->updateOrCreate(
+            $restaurant = Restaurant::query()->firstOrCreate(
                 ['prefix' => $data['prefix']],
                 [
                     ...$data,
@@ -55,7 +55,7 @@ class RestaurantSeeder extends Seeder
                 ]
             );
 
-            if ($restaurant->queueTickets()->count() === 0) {
+            if (app()->environment('local', 'testing') && $restaurant->queueTickets()->count() === 0) {
                 for ($i = 1; $i <= $sampleQueue; $i++) {
                     QueueTicket::query()->create([
                         'restaurant_id' => $restaurant->id,

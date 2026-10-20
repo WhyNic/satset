@@ -34,7 +34,7 @@ class AdminDashboardController extends Controller
             'restaurants' => $restaurants,
             'totalRestaurants' => Restaurant::query()->count(),
             'activeQueue' => QueueTicket::query()->whereIn('status', [QueueTicket::STATUS_WAITING, QueueTicket::STATUS_CALLED])->count(),
-            'customersToday' => QueueTicket::query()->whereDate('joined_at', today())->count(),
+            'customersToday' => QueueTicket::query()->whereDate('joined_at', today())->sum('party_size'),
             'averageWaiting' => $averageWaiting,
         ]);
     }

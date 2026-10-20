@@ -5,505 +5,183 @@ namespace Tests\Feature;
 use App\Models\QueueTicket;
 use App\Models\Restaurant;
 use App\Models\User;
-use App\Notifications\QueueAlmostTurnNotification;
-use App\Notifications\QueueCalledNotification;
-use App\Services\QueuePushNotificationService;
 use App\Services\QueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class SatSetFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_customer_can_create_queue_ticket_without_login(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Http::preventStrayRequests();
+        config(['whatsapp.enabled' => false]);
+    }
+
+    public function test_qr_landing_displays_stats_without_creating_ticket(): void
     {
         $restaurant = $this->restaurant();
+        $queue = app(QueueService::class);
+        $queue->createTicket($restaurant);
+        $queue->createTicket($restaurant);
+        $queue->callNext($restaurant);
 
-        $response = $this->post(route('queue.store', $restaurant));
-
-        $ticket = QueueTicket::query()->firstOrFail();
-
-        $response->assertRedirect(route('queue.show', ['ticket' => $ticket->public_token]));
-        $this->assertSame('A-001', $ticket->queue_number);
-        $this->assertNull($ticket->phone_number);
-        $this->assertNull($ticket->customer_name);
-        $this->assertNotNull($ticket->public_token);
+        $this->get(route('outlets.show', $restaurant->slug))->assertOk()
+            ->assertSee('Ayam Bakar Nusantara')->assertSee('A-001')->assertSee('Sedang menunggu');
+        $this->getJson(route('outlets.status', $restaurant->slug))->assertOk()
+            ->assertJson(['waiting_count' => 1, 'current_number' => 'A-001', 'estimated_wait' => 10, 'available' => true]);
+        $this->assertDatabaseCount('queue_tickets', 2);
     }
 
-    public function test_queue_number_generated_correctly(): void
+    public function test_web_registration_is_removed_and_old_links_redirect(): void
     {
         $restaurant = $this->restaurant();
-        QueueTicket::query()->create($this->ticketData($restaurant, 1));
-
-        $number = app(QueueService::class)->generateQueueNumber($restaurant);
-
-        $this->assertSame(2, $number['sequence_number']);
-        $this->assertSame('A-002', $number['queue_number']);
+        $this->post("/restaurants/{$restaurant->id}/queue")->assertNotFound();
+        $this->get("/restaurants/{$restaurant->id}/queue/new")->assertRedirect(route('outlets.show', $restaurant->slug));
+        $this->get(route('restaurants.show', $restaurant))->assertRedirect(route('outlets.show', $restaurant->slug));
+        $this->assertDatabaseCount('queue_tickets', 0);
     }
 
-    public function test_estimated_waiting_time_is_calculated(): void
-    {
-        $restaurant = $this->restaurant(['average_service_minutes' => 5]);
-
-        QueueTicket::query()->create($this->ticketData($restaurant, 1));
-        QueueTicket::query()->create($this->ticketData($restaurant, 2));
-
-        $ticket = QueueTicket::query()->create(
-            $this->ticketData($restaurant, 3)
-        );
-
-        $this->assertSame(
-            10,
-            app(QueueService::class)->calculateEstimatedWait($restaurant, $ticket)
-        );
-    }
-
-    public function test_admin_can_call_next_customer(): void
+    public function test_queue_number_and_wait_estimate_remain_correct(): void
     {
         $restaurant = $this->restaurant();
+        $queue = app(QueueService::class);
+        $queue->createTicket($restaurant, partySize: 3);
+        $queue->createTicket($restaurant);
+        $third = $queue->createTicket($restaurant);
 
-        $ticket = QueueTicket::query()->create(
-            $this->ticketData($restaurant, 1)
-        );
-
-        $admin = User::query()->create([
-            'name' => 'Admin',
-            'email' => 'admin@satset.local',
-            'password' => Hash::make('password'),
-        ]);
-
-        $this->actingAs($admin)
-            ->post(route('admin.restaurants.queue.call-next', $restaurant))
-            ->assertSessionHas('status');
-
-        $this->assertSame(
-            QueueTicket::STATUS_CALLED,
-            $ticket->fresh()->status
-        );
+        $this->assertSame('A-003', $third->queue_number);
+        $this->assertSame(3, $third->sequence_number);
+        $this->assertSame(10, $queue->calculateEstimatedWait($restaurant, $third));
+        $this->assertSame(3, QueueTicket::query()->count());
     }
 
-    public function test_admin_restaurant_index_links_to_queue_management(): void
+    public function test_admin_can_call_complete_skip_cancel_and_update_positions(): void
     {
         $restaurant = $this->restaurant();
+        $queue = app(QueueService::class);
+        $first = $queue->createTicket($restaurant);
+        $second = $queue->createTicket($restaurant);
+        $third = $queue->createTicket($restaurant);
+        $this->actingAs(User::factory()->create());
 
-        $admin = User::query()->create([
-            'name' => 'Admin',
-            'email' => 'admin@satset.local',
-            'password' => Hash::make('password'),
-        ]);
-
-        $this->actingAs($admin)
-            ->get(route('admin.restaurants.index'))
-            ->assertOk()
-            ->assertSee('Kelola Antrean')
-            ->assertSee(route('admin.restaurants.queue', $restaurant), false);
+        $this->post(route('admin.restaurants.queue.call-next', $restaurant))->assertRedirect();
+        $this->post(route('admin.restaurants.queue.call-next', $restaurant))->assertRedirect();
+        $this->assertSame(1, QueueTicket::query()->where('status', 'called')->count());
+        $this->post(route('admin.restaurants.queue.complete', $restaurant))->assertRedirect();
+        $this->assertSame('completed', $first->fresh()->status);
+        $this->assertSame(1, $queue->calculateCustomerPosition($second));
+        $this->post(route('admin.restaurants.queue.call-next', $restaurant))->assertRedirect();
+        $this->post(route('admin.restaurants.queue.skip', $restaurant))->assertRedirect();
+        $this->assertSame('skipped', $second->fresh()->status);
+        $this->post(route('admin.restaurants.queue.cancel', [$restaurant, $third]))->assertRedirect();
+        $this->assertSame('cancelled', $third->fresh()->status);
+        $this->assertSame(0, $queue->getActiveQueueCount($restaurant));
     }
 
-    public function test_admin_queue_management_shows_push_status_and_call_next_triggers_notifications(): void
-    {
-        Notification::fake();
-
-        config([
-            'webpush.vapid.public_key' => 'public',
-            'webpush.vapid.private_key' => 'private',
-        ]);
-
-        $restaurant = $this->restaurant();
-
-        $tickets = $this->waitingTickets($restaurant, 4);
-
-        $tickets[1]->updatePushSubscription(
-            'https://push.example.test/called-from-admin',
-            'p256dh',
-            'auth',
-            'aes128gcm'
-        );
-
-        $tickets[4]->updatePushSubscription(
-            'https://push.example.test/three-from-admin',
-            'p256dh',
-            'auth',
-            'aes128gcm'
-        );
-
-        $admin = User::query()->create([
-            'name' => 'Admin',
-            'email' => 'admin@satset.local',
-            'password' => Hash::make('password'),
-        ]);
-
-        $this->actingAs($admin)
-            ->get(route('admin.restaurants.queue', $restaurant))
-            ->assertOk()
-            ->assertSee($restaurant->name)
-            ->assertSee('Status restoran')
-            ->assertSee('Panggil Berikutnya')
-            ->assertSee('Push Notification')
-            ->assertSeeInOrder(['A-004', 'Active']);
-
-        $this->actingAs($admin)
-            ->post(route('admin.restaurants.queue.call-next', $restaurant))
-            ->assertSessionHas('status');
-
-        $this->assertSame(
-            QueueTicket::STATUS_CALLED,
-            $tickets[1]->fresh()->status
-        );
-
-        $this->assertNotNull(
-            $tickets[4]->fresh()->three_ahead_notified_at
-        );
-
-        Notification::assertSentTo(
-            $tickets[1],
-            QueueCalledNotification::class,
-            1
-        );
-
-        Notification::assertSentTo(
-            $tickets[4],
-            QueueAlmostTurnNotification::class,
-            1
-        );
-    }
-
-    public function test_push_subscription_can_be_saved_for_public_ticket(): void
+    public function test_admin_cannot_cancel_ticket_belonging_to_another_outlet(): void
     {
         $restaurant = $this->restaurant();
-
-        $ticket = QueueTicket::query()->create(
-            $this->ticketData($restaurant, 1)
-        );
-
-        $this->postJson(
-            route('queue.push-subscription.store', [
-                'ticket' => $ticket->public_token,
-            ]),
-            [
-                'endpoint' => 'https://push.example.test/subscription/1',
-                'keys' => [
-                    'p256dh' => 'test-public-key',
-                    'auth' => 'test-auth-token',
-                ],
-                'contentEncoding' => 'aes128gcm',
-            ]
-        )->assertOk();
-
-        $this->assertSame(
-            1,
-            $ticket->fresh()->pushSubscriptions()->count()
-        );
+        $other = $this->restaurant(['slug' => 'coffee', 'prefix' => 'C']);
+        $ticket = app(QueueService::class)->createTicket($other);
+        $this->actingAs(User::factory()->create())->post(route('admin.restaurants.queue.cancel', [$restaurant, $ticket]))->assertNotFound();
+        $this->assertSame('waiting', $ticket->fresh()->status);
     }
 
-    public function test_invalid_public_token_is_rejected_for_push_subscription(): void
-    {
-        $this->postJson(
-            '/queue/not-a-real-token/push-subscription',
-            [
-                'endpoint' => 'https://push.example.test/subscription/1',
-                'keys' => [
-                    'p256dh' => 'test-public-key',
-                    'auth' => 'test-auth-token',
-                ],
-                'contentEncoding' => 'aes128gcm',
-            ]
-        )->assertNotFound();
-    }
-
-    public function test_cancelled_customer_is_not_in_active_queue(): void
+    public function test_all_admin_pages_require_authentication_and_work_after_login(): void
     {
         $restaurant = $this->restaurant();
-
-        $ticket = QueueTicket::query()->create(
-            $this->ticketData($restaurant, 1)
-        );
-
-        app(QueueService::class)->cancelTicket($ticket);
-
-        $this->assertSame(
-            0,
-            app(QueueService::class)->getActiveQueueCount($restaurant)
-        );
-    }
-
-    public function test_recommendation_prefers_same_category_with_shorter_wait(): void
-    {
-        $busy = $this->restaurant([
-            'name' => 'Ayam Bakar Nusantara',
-            'prefix' => 'A',
-            'category' => 'Ayam',
-        ]);
-
-        $fast = $this->restaurant([
-            'name' => 'Ayam Geprek Mantap',
-            'prefix' => 'B',
-            'category' => 'Ayam',
-            'average_service_minutes' => 4,
-        ]);
-
-        $other = $this->restaurant([
-            'name' => 'Rice Bowl & More',
-            'prefix' => 'C',
-            'category' => 'Rice Bowl',
-        ]);
-
-        for ($i = 1; $i <= 10; $i++) {
-            QueueTicket::query()->create(
-                $this->ticketData($busy, $i)
-            );
+        $paths = ['/admin', '/admin/dashboard', '/admin/queues', '/admin/restaurants', '/admin/whatsapp-logs', '/admin/qr', "/admin/restaurants/{$restaurant->id}/queue", "/admin/restaurants/{$restaurant->id}/qr"];
+        foreach ($paths as $path) {
+            $this->get($path)->assertRedirect(route('admin.login'));
         }
-
-        QueueTicket::query()->create(
-            $this->ticketData($fast, 1)
-        );
-
-        $recommendations = app(QueueService::class)
-            ->getRecommendations($busy);
-
-        $this->assertTrue(
-            $recommendations->contains($fast)
-        );
-
-        $this->assertFalse(
-            $recommendations->contains($other)
-        );
-
-        $this->assertSame(
-            $fast->id,
-            $recommendations->first()->id
-        );
+        $admin = User::factory()->create(['password' => bcrypt('test-password')]);
+        $this->post(route('admin.login.store'), ['email' => $admin->email, 'password' => 'test-password'])->assertRedirect();
+        foreach (array_slice($paths, 1) as $path) {
+            $this->get($path)->assertOk();
+        }
+        $this->post(route('admin.logout'))->assertRedirect(route('admin.login'));
+        $this->get('/admin/dashboard')->assertRedirect(route('admin.login'));
     }
 
-    public function test_three_ahead_notification_is_only_marked_once(): void
+    public function test_restaurant_max_party_size_is_editable_and_qr_slug_is_stable(): void
     {
-        Notification::fake();
-
-        config([
-            'webpush.vapid.public_key' => 'public',
-            'webpush.vapid.private_key' => 'private',
-        ]);
-
         $restaurant = $this->restaurant();
-
-        $tickets = $this->waitingTickets($restaurant, 5);
-
-        $target = $tickets[4];
-
-        $target->updatePushSubscription(
-            'https://push.example.test/three',
-            'p256dh',
-            'auth',
-            'aes128gcm'
-        );
-
-        app(QueueService::class)->callNext($restaurant);
-
-        app(QueuePushNotificationService::class)
-            ->notifyWaitingPositions(
-                $restaurant,
-                app(QueueService::class)
-            );
-
-        app(QueuePushNotificationService::class)
-            ->notifyWaitingPositions(
-                $restaurant,
-                app(QueueService::class)
-            );
-
-        Notification::assertSentTo(
-            $target,
-            QueueAlmostTurnNotification::class,
-            1
-        );
-
-        $this->assertNotNull(
-            $target->fresh()->three_ahead_notified_at
-        );
+        $data = $restaurant->only(['name','category','prefix','average_service_minutes','max_wait_minutes','active','queue_open']);
+        $this->actingAs(User::factory()->create())->put(route('admin.restaurants.update', $restaurant), [
+            ...$data, 'name' => 'Nama Baru', 'max_party_size' => 9,
+        ])->assertRedirect(route('admin.restaurants.index'));
+        $this->assertSame(9, $restaurant->fresh()->max_party_size);
+        $this->assertSame('ayam-bakar-nusantara', $restaurant->fresh()->slug);
+        $this->put(route('admin.restaurants.update', $restaurant), [...$data, 'max_party_size' => 0])->assertSessionHasErrors('max_party_size');
     }
 
-    public function test_one_ahead_notification_is_only_marked_once(): void
+    public function test_prefix_cannot_be_reused_after_tickets_exist(): void
     {
-        Notification::fake();
-
-        config([
-            'webpush.vapid.public_key' => 'public',
-            'webpush.vapid.private_key' => 'private',
-        ]);
-
         $restaurant = $this->restaurant();
-
-        $tickets = $this->waitingTickets($restaurant, 3);
-
-        $target = $tickets[2];
-
-        $target->updatePushSubscription(
-            'https://push.example.test/one',
-            'p256dh',
-            'auth',
-            'aes128gcm'
-        );
-
-        app(QueueService::class)->callNext($restaurant);
-
-        app(QueuePushNotificationService::class)
-            ->notifyWaitingPositions(
-                $restaurant,
-                app(QueueService::class)
-            );
-
-        app(QueuePushNotificationService::class)
-            ->notifyWaitingPositions(
-                $restaurant,
-                app(QueueService::class)
-            );
-
-        Notification::assertSentTo(
-            $target,
-            QueueAlmostTurnNotification::class,
-            1
-        );
-
-        $this->assertNotNull(
-            $target->fresh()->one_ahead_notified_at
-        );
+        app(QueueService::class)->createTicket($restaurant);
+        $data = $restaurant->only(['name','category','average_service_minutes','max_wait_minutes','max_party_size','active','queue_open']);
+        $this->actingAs(User::factory()->create())->put(route('admin.restaurants.update', $restaurant), [...$data, 'prefix' => 'B'])->assertSessionHasErrors('prefix');
     }
 
-    public function test_called_notification_is_only_marked_once(): void
+    public function test_qr_download_and_print_page_use_canonical_outlet_url(): void
     {
-        Notification::fake();
-
-        config([
-            'webpush.vapid.public_key' => 'public',
-            'webpush.vapid.private_key' => 'private',
-        ]);
-
+        config(['app.url' => 'https://queue.example.test']);
         $restaurant = $this->restaurant();
-
-        $ticket = QueueTicket::query()->create(
-            $this->ticketData(
-                $restaurant,
-                1,
-                [
-                    'status' => QueueTicket::STATUS_CALLED,
-                ]
-            )
-        );
-
-        $ticket->updatePushSubscription(
-            'https://push.example.test/called',
-            'p256dh',
-            'auth',
-            'aes128gcm'
-        );
-
-        app(QueuePushNotificationService::class)
-            ->notifyCalled(
-                $ticket->load('restaurant')
-            );
-
-        app(QueuePushNotificationService::class)
-            ->notifyCalled(
-                $ticket->fresh('restaurant')
-            );
-
-        Notification::assertSentTo(
-            $ticket,
-            QueueCalledNotification::class,
-            1
-        );
-
-        $this->assertNotNull(
-            $ticket->fresh()->called_notified_at
-        );
+        $this->actingAs(User::factory()->create())->get(route('admin.qr.show', $restaurant))
+            ->assertOk()->assertSee('https://queue.example.test/r/ayam-bakar-nusantara')->assertSee('Cetak QR');
+        $response = $this->get(route('admin.qr.image', [$restaurant, 'download' => 1]));
+        $response->assertOk()->assertHeader('Content-Type', 'image/svg+xml')
+            ->assertHeader('Content-Disposition', 'attachment; filename="satset-ayam-bakar-nusantara.svg"');
+        $this->assertStringContainsString('<svg', $response->getContent());
     }
 
-    public function test_refresh_active_queue_does_not_create_new_ticket(): void
+    public function test_closed_outlet_remains_visible_but_cannot_join(): void
+    {
+        $restaurant = $this->restaurant(['queue_open' => false]);
+        $this->get(route('outlets.show', $restaurant->slug))->assertOk()->assertSee('Antrean sedang ditutup');
+        $this->get(route('outlets.whatsapp', $restaurant->slug))->assertConflict();
+        $this->assertDatabaseCount('queue_tickets', 0);
+    }
+
+    public function test_public_ticket_refresh_does_not_create_ticket_or_expose_phone(): void
     {
         $restaurant = $this->restaurant();
-
-        $ticket = QueueTicket::query()->create(
-            $this->ticketData($restaurant, 1)
-        );
-
-        $this->get(
-            route('queue.show', [
-                'ticket' => $ticket->public_token,
-            ])
-        )->assertOk();
-
-        $this->get(
-            route('queue.show', [
-                'ticket' => $ticket->public_token,
-            ])
-        )->assertOk();
-
+        $ticket = app(QueueService::class)->createTicket($restaurant, phone: '081234567890', partySize: 3);
+        $this->get(route('queue.show', $ticket->public_token))->assertOk()->assertSee('3 orang')->assertDontSee('6281234567890');
+        $this->get(route('queue.show', $ticket->public_token))->assertOk();
+        $this->getJson(route('queue.status', $ticket->public_token))->assertOk()->assertJsonMissingPath('phone_number');
         $this->assertDatabaseCount('queue_tickets', 1);
+    }
+
+    public function test_recommendations_are_same_category_and_sorted_by_wait(): void
+    {
+        $selected = $this->restaurant();
+        $fast = $this->restaurant(['name'=>'Ayam cepat','slug'=>'ayam-cepat','prefix'=>'B']);
+        $slow = $this->restaurant(['name'=>'Ayam lambat','slug'=>'ayam-lambat','prefix'=>'C']);
+        $this->restaurant(['name'=>'Kopi','slug'=>'kopi','prefix'=>'D','category'=>'Kopi']);
+        app(QueueService::class)->createTicket($slow);
+        $recommendations = app(QueueService::class)->getRecommendations($selected);
+        $this->assertSame([$fast->id, $slow->id], $recommendations->pluck('id')->all());
+        $this->get(route('restaurants.recommendations', $selected))->assertOk()->assertSee('Ayam cepat');
+    }
+
+    public function test_outlet_name_is_escaped(): void
+    {
+        $restaurant = $this->restaurant(['name'=>'<script>alert(1)</script>']);
+        $this->get(route('outlets.show', $restaurant->slug))->assertOk()
+            ->assertSee('&lt;script&gt;', false)->assertDontSee('<script>alert(1)</script>', false);
     }
 
     private function restaurant(array $overrides = []): Restaurant
     {
-        $prefix = $overrides['prefix'] ?? 'A';
-
-        return Restaurant::query()->create([
-            'name' => $overrides['name'] ?? 'Ayam Bakar Nusantara',
-            'slug' => strtolower($prefix).'-restaurant',
-            'category' => $overrides['category'] ?? 'Ayam',
-            'description' => $overrides['description'] ?? 'Ayam bakar favorit.',
-            'prefix' => $prefix,
-            'average_service_minutes' => $overrides['average_service_minutes'] ?? 5,
-            'max_wait_minutes' => $overrides['max_wait_minutes'] ?? 30,
-            'active' => $overrides['active'] ?? true,
-        ]);
-    }
-
-    private function ticketData(
-        Restaurant $restaurant,
-        int $sequence,
-        array $overrides = []
-    ): array {
-        return [
-            'restaurant_id' => $restaurant->id,
-            'public_token' => $overrides['public_token']
-                ?? (string) \Illuminate\Support\Str::uuid(),
-            'customer_name' => $overrides['customer_name']
-                ?? "Customer {$sequence}",
-            'phone_number' => $overrides['phone_number']
-                ?? '6281234567'.str_pad(
-                    (string) $sequence,
-                    3,
-                    '0',
-                    STR_PAD_LEFT
-                ),
-            'queue_number' => sprintf(
-                '%s-%03d',
-                $restaurant->prefix,
-                $sequence
-            ),
-            'sequence_number' => $sequence,
-            'status' => $overrides['status']
-                ?? QueueTicket::STATUS_WAITING,
-            'joined_at' => now(),
-        ];
-    }
-
-    /**
-     * @return array<int, QueueTicket>
-     */
-    private function waitingTickets(
-        Restaurant $restaurant,
-        int $count
-    ): array {
-        $tickets = [];
-
-        for ($i = 1; $i <= $count; $i++) {
-            $tickets[$i] = QueueTicket::query()->create(
-                $this->ticketData($restaurant, $i)
-            );
-        }
-
-        return $tickets;
+        return Restaurant::query()->create(array_merge([
+            'name'=>'Ayam Bakar Nusantara', 'slug'=>'ayam-bakar-nusantara', 'category'=>'Ayam',
+            'prefix'=>'A', 'average_service_minutes'=>5, 'max_wait_minutes'=>30,
+            'max_party_size'=>6, 'active'=>true, 'queue_open'=>true,
+        ], $overrides));
     }
 }

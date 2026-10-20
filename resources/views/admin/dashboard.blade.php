@@ -2,7 +2,7 @@
     <section class="admin-page-header">
         <div>
             <p class="admin-kicker">Dashboard SatSet</p>
-            <h1>Kelola restoran dan antrean secara real-time.</h1>
+            <h1>Ringkasan operasional</h1>
         </div>
         <a class="admin-secondary-button" href="{{ route('admin.restaurants.create') }}">Tambah Restoran</a>
     </section>
@@ -17,7 +17,7 @@
             <strong>{{ $activeQueue }}</strong>
         </article>
         <article>
-            <span>Customer Hari Ini</span>
+            <span>Tamu Hari Ini</span>
             <strong>{{ $customersToday }}</strong>
         </article>
         <article>
@@ -30,7 +30,7 @@
         <div class="admin-panel-heading">
             <div>
                 <h2>Status Restoran</h2>
-                <p>Ringkasan antrean aktif dari seluruh tenant.</p>
+                <p>Kondisi antrean seluruh outlet.</p>
             </div>
             <a href="{{ route('admin.queues.index') }}">Lihat semua antrean</a>
         </div>
@@ -55,9 +55,9 @@
                                 <strong>{{ $restaurant->name }}</strong>
                                 <span>{{ $restaurant->category }}</span>
                             </td>
-                            <td><x-status-badge :status="$snapshot['status']" /></td>
+                            <td><span class="admin-status {{ $snapshot['available'] ? 'admin-status-waiting' : 'admin-status-cancelled' }}">{{ $snapshot['available'] ? 'Dibuka' : 'Ditutup' }}</span></td>
                             <td>{{ $restaurant->getAttribute('current_number') ?? '-' }}</td>
-                            <td>{{ $restaurant->getAttribute('waiting_count') }} customer</td>
+                            <td>{{ $restaurant->getAttribute('waiting_count') }} kelompok</td>
                             <td>{{ $snapshot['estimated_wait'] }} menit</td>
                             <td><a class="admin-table-action" href="{{ route('admin.restaurants.queue', $restaurant) }}">Kelola Antrean</a></td>
                         </tr>

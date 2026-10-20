@@ -1,3 +1,26 @@
+button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.qr-poster { max-width: 540px; margin: 24px auto; text-align: center; padding: 40px 32px; background: white; border: 1px solid #dce5df; border-radius: 8px; }
+.qr-brand { font-size: 42px; font-weight: 850; color: #0b2118; }
+.qr-brand span { color: #178347; }
+.qr-poster h2 { font-size: 26px; margin: 12px 0 20px; overflow-wrap: anywhere; }
+.qr-poster img { display: block; width: min(100%,360px); height: auto; aspect-ratio: 1; margin: auto; }
+.qr-poster p { color: #607069; line-height: 1.6; }
+.qr-poster small { display: block; overflow-wrap: anywhere; margin-top: 24px; color: #607069; }
+.qr-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.qr-url-label { display: grid; gap: 8px; max-width: 540px; margin: 20px auto; font-size: 13px; color: #607069; }
+.qr-url-label input { min-width: 0; width: 100%; padding: 12px; border: 1px solid #dce5df; border-radius: 6px; background: white; }
+.url-cell { max-width: 380px; overflow-wrap: anywhere; white-space: normal; }
+.log-table details { min-width: 220px; max-width: 400px; }
+.log-table summary { cursor: pointer; white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.log-message { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; }
+:focus-visible { outline: 3px solid #178347; outline-offset: 3px; }
+@media print {
+    .no-print,.admin-sidebar,.admin-topbar { display: none!important; }
+    .admin-shell { display: block!important; }
+    .admin-content { width: 100%!important; padding: 0!important; }
+    .qr-poster { border: 0; margin: 0 auto; break-inside: avoid; }
+    body { background: white!important; }
+}
 :root {
     --admin-ink: #0F172A;
     --admin-muted: #64748B;
@@ -80,7 +103,7 @@ select {
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 22px;
-    background: #0B1220;
+    background: #0b2118;
     color: white;
     scrollbar-gutter: stable;
 }
@@ -450,14 +473,12 @@ select {
 }
 
 .admin-status-called,
-.admin-status-push-active,
 .badge-normal {
     background: #DCFCE7;
     color: #166534;
 }
 
 .admin-status-completed,
-.admin-status-push-inactive,
 .badge-muted {
     background: #E0F2FE;
     color: #075985;

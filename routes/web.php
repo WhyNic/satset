@@ -6,24 +6,30 @@ use App\Http\Controllers\Admin\AdminQueueController;
 use App\Http\Controllers\Admin\AdminQueueOverviewController;
 use App\Http\Controllers\Admin\AdminRestaurantController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\WhatsAppWebhookController;
+use App\Http\Controllers\Admin\AdminWhatsAppLogController;
+use App\Http\Controllers\Admin\AdminQrController;
 use App\Http\Controllers\QueueController;
 use App\Http\Controllers\RestaurantController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 
-Route::get('/restaurants/{restaurant}', [RestaurantController::class, 'show'])
+Route::get('/r/{restaurant:slug}', [RestaurantController::class, 'show'])->name('outlets.show');
+Route::get('/r/{restaurant:slug}/whatsapp', [RestaurantController::class, 'whatsapp'])->middleware('throttle:30,1')->name('outlets.whatsapp');
+Route::get('/r/{restaurant:slug}/status', [RestaurantController::class, 'status'])->middleware('throttle:120,1')->name('outlets.status');
+
+Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.verify');
+Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])->name('whatsapp.webhook');
+
+Route::get('/restaurants/{restaurant}', fn (\App\Models\Restaurant $restaurant) => redirect()->route('outlets.show', $restaurant->slug))
     ->name('restaurants.show');
 
 Route::get('/restaurants/{restaurant}/recommendations', [RestaurantController::class, 'recommendations'])
     ->name('restaurants.recommendations');
 
-Route::get('/restaurants/{restaurant}/queue/new', [QueueController::class, 'create'])
+Route::get('/restaurants/{restaurant}/queue/new', fn (\App\Models\Restaurant $restaurant) => redirect()->route('outlets.show', $restaurant->slug))
     ->name('queue.create');
-
-Route::post('/restaurants/{restaurant}/queue', [QueueController::class, 'store'])
-    ->name('queue.store');
 
 Route::get('/queue/{ticket:public_token}', [QueueController::class, 'show'])
     ->name('queue.show');
@@ -34,17 +40,12 @@ Route::get('/queue/{ticket:public_token}/status', [QueueController::class, 'stat
 Route::post('/queue/{ticket:public_token}/cancel', [QueueController::class, 'cancel'])
     ->name('queue.cancel');
 
-Route::post('/queue/{ticket:public_token}/push-subscription', [PushSubscriptionController::class, 'store'])
-    ->name('queue.push-subscription.store');
-
-Route::delete('/queue/{ticket:public_token}/push-subscription', [PushSubscriptionController::class, 'destroy'])
-    ->name('queue.push-subscription.destroy');
-
 Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])
         ->name('login');
 
     Route::post('/login', [AdminAuthController::class, 'login'])
+        ->middleware('throttle:5,1')
         ->name('login.store');
 
     Route::middleware('auth')->group(function (): void {
@@ -59,6 +60,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         Route::get('/queues', AdminQueueOverviewController::class)
             ->name('queues.index');
+        Route::get('/whatsapp-logs', AdminWhatsAppLogController::class)->name('whatsapp-logs.index');
+        Route::get('/qr', [AdminQrController::class, 'index'])->name('qr.index');
+        Route::get('/restaurants/{restaurant}/qr', [AdminQrController::class, 'show'])->name('qr.show');
+        Route::get('/restaurants/{restaurant}/qr.svg', [AdminQrController::class, 'image'])->name('qr.image');
 
         Route::resource('/restaurants', AdminRestaurantController::class)
             ->except(['show']);
@@ -74,9 +79,6 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         Route::post('/restaurants/{restaurant}/queue/skip', [AdminQueueController::class, 'skip'])
             ->name('restaurants.queue.skip');
-
-        Route::post('/restaurants/{restaurant}/queue/reset', [AdminQueueController::class, 'reset'])
-            ->name('restaurants.queue.reset');
 
         Route::post('/restaurants/{restaurant}/queue/{ticket}/cancel', [AdminQueueController::class, 'cancel'])
             ->name('restaurants.queue.cancel');

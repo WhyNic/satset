@@ -1,43 +1,33 @@
-<x-layouts.customer title="{{ $restaurant->name }} - SatSet" :show-header="false">
-    <x-customer.app-header title="Detail Restoran" :fallback="route('home')" />
-
-    <section class="customer-detail-page">
-        <x-customer.restaurant-image :restaurant="$restaurant" variant="hero" loading="eager" class="restaurant-hero-card" />
-
-        <article class="customer-content-card">
-            <div class="detail-title-row">
-                <x-status-badge :status="$snapshot['status']" />
-                @if ($snapshot['estimated_wait'] > $restaurant->max_wait_minutes)
-                    <span class="soft-warning">Antrean panjang</span>
-                @endif
+<x-layouts.customer :title="$restaurant->name.' | SatSet'">
+    <article class="outlet-page" data-outlet-status="{{ route('outlets.status', $restaurant->slug) }}">
+        <div class="outlet-photo"><x-customer.restaurant-image :restaurant="$restaurant" variant="detail" loading="eager" /><span class="photo-label">ANTRE DENGAN SATSET</span></div>
+        <div class="outlet-body">
+            <div class="outlet-heading">
+                <p class="eyebrow">{{ $restaurant->category }}</p>
+                <h1>{{ $restaurant->name }}</h1>
+                <p class="description">{{ $restaurant->description }}</p>
+                <span class="availability {{ $snapshot['available'] ? '' : 'closed' }}" data-outlet-availability>{{ $snapshot['available'] ? 'Antrean sedang dibuka' : 'Antrean sedang ditutup' }}</span>
             </div>
-
-            <h1>{{ $restaurant->name }}</h1>
-            <p class="lead-text">{{ $restaurant->category }} · {{ $restaurant->description }}</p>
-
-            <div class="stats-grid compact-stats">
-                <div><span>Antrean aktif</span><strong>{{ $snapshot['active_count'] }}</strong></div>
-                <div><span>Estimasi</span><strong>{{ $snapshot['estimated_wait'] }} menit</strong></div>
-                <div><span>Rata-rata servis</span><strong>{{ $restaurant->average_service_minutes }} menit</strong></div>
-            </div>
-
-            @if ($snapshot['estimated_wait'] > $restaurant->max_wait_minutes)
-                <div class="inline-alert">
-                    <strong>Antrean sedang padat.</strong>
-                    <span>SatSet bisa bantu cari restoran kategori serupa dengan estimasi lebih singkat.</span>
-                    <a href="{{ route('restaurants.recommendations', $restaurant) }}">Lihat rekomendasi</a>
+            <section class="queue-overview" aria-label="Kondisi antrean">
+                <div class="serving-row"><span>Sedang dilayani</span><strong data-outlet-current>{{ $snapshot['current_number'] ?? 'Belum ada' }}</strong></div>
+                <div class="queue-metrics">
+                    <div><span>Sedang menunggu</span><strong><span data-outlet-waiting>{{ $snapshot['waiting_count'] }}</span> <small>antrean</small></strong></div>
+                    <div><span>Estimasi waktu</span><strong><span class="estimate-sign">&plusmn;</span><span data-outlet-estimate>{{ $snapshot['estimated_wait'] }}</span> <small>menit</small></strong></div>
                 </div>
-            @endif
-
-            <div class="cta-stack sticky-mobile-actions">
-                <form method="post" action="{{ route('queue.store', $restaurant) }}">
-                    @csrf
-                    <button class="button" type="submit">Ambil Antrean</button>
-                </form>
-                <p>Nomor antrean dibuat langsung di SatSet. Aktifkan notifikasi setelah tiket muncul agar tidak melewatkan giliran.</p>
+                <p class="live-note" data-live-note>Estimasi dapat berubah sesuai pelayanan outlet.</p>
+            </section>
+            <div class="whatsapp-action">
+                @if($whatsappUrl)
+                    <a class="button button-green whatsapp-cta" href="{{ route('outlets.whatsapp', $restaurant->slug) }}" @if(!$snapshot['available']) hidden @endif data-outlet-cta>Lanjut via WhatsApp <span aria-hidden="true">&nearr;</span></a>
+                    <p data-outlet-closed @if($snapshot['available']) hidden @endif>Antrean sedang ditutup. Silakan hubungi staf outlet.</p>
+                @else
+                    <button class="button button-green whatsapp-cta" type="button" disabled>Lanjut via WhatsApp</button>
+                    <p class="notice">Pendaftaran WhatsApp belum tersedia. Silakan hubungi staf outlet.</p>
+                @endif
+                <small>Tanpa login. Nomor antrean dibuat setelah Anda konfirmasi.</small>
             </div>
-
-            <p class="microcopy">Tidak perlu install aplikasi. Tiket digital langsung aktif setelah data tersimpan.</p>
-        </article>
-    </section>
+            <div class="outlet-next"><div><span class="step-number">01</span><p><strong>Lanjutkan di WhatsApp</strong><span>Pilih jumlah tamu dan konfirmasi antrean Anda.</span></p></div><div><span class="step-number">02</span><p><strong>Nikmati waktu Anda</strong><span>Kami kabari saat giliran sudah dekat.</span></p></div></div>
+            <p class="party-note">Maksimal {{ $restaurant->max_party_size }} orang per kelompok. Satu kelompok, satu nomor antrean.</p>
+        </div>
+    </article>
 </x-layouts.customer>
