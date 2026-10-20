@@ -17,19 +17,14 @@
                 <p class="live-note" data-live-note>Estimasi dapat berubah sesuai pelayanan outlet.</p>
             </section>
             <div class="whatsapp-action">
+                <a class="button button-green" href="{{ route('outlets.join', $restaurant->slug) }}" @if(!$snapshot['available']) hidden @endif data-outlet-join>Ambil antrean <span aria-hidden="true">&nearr;</span></a>
                 @if($whatsappUrl)
-                    <a class="button button-green whatsapp-cta" href="{{ route('outlets.whatsapp', $restaurant->slug) }}" @if(!$snapshot['available']) hidden @endif data-outlet-cta>Lanjut via WhatsApp <span aria-hidden="true">&nearr;</span></a>
-                    <p data-outlet-closed @if($snapshot['available']) hidden @endif>Antrean sedang ditutup. Silakan hubungi staf outlet.</p>
-                @else
-                    <button class="button button-green whatsapp-cta" type="button" disabled>Lanjut via WhatsApp</button>
-                    <p class="notice">Pendaftaran WhatsApp belum tersedia. Silakan hubungi staf outlet.</p>
+                    <a class="button button-outline" href="{{ route('outlets.whatsapp', $restaurant->slug) }}" @if(!$snapshot['available']) hidden @endif data-outlet-cta>Lanjut via WhatsApp</a>
                 @endif
-                @if($snapshot['available'])
-                    <a class="button button-outline" href="{{ route('outlets.join', $restaurant->slug) }}" data-outlet-join>Ambil antrean lewat email</a>
-                @endif
-                <small>Tanpa login. Nomor antrean dibuat setelah Anda konfirmasi.</small>
+                <p data-outlet-closed @if($snapshot['available']) hidden @endif>Antrean sedang ditutup. Silakan hubungi staf outlet.</p>
+                <small>Tanpa login. Isi jumlah tamu dan email, lalu nomor antrean dibuat setelah Anda kirim.</small>
             </div>
-            <div class="outlet-next"><div><span class="step-number">01</span><p><strong>Lanjutkan di WhatsApp</strong><span>Pilih jumlah tamu dan konfirmasi antrean Anda.</span></p></div><div><span class="step-number">02</span><p><strong>Nikmati waktu Anda</strong><span>Kami kabari saat giliran sudah dekat.</span></p></div></div>
+            <div class="outlet-next"><div><span class="step-number">01</span><p><strong>Isi jumlah tamu dan email</strong><span>Konfirmasi dan posisi antrean dikirim ke email Anda.</span></p></div><div><span class="step-number">02</span><p><strong>Nikmati waktu Anda</strong><span>Kami kirim email saat giliran sudah dekat.</span></p></div></div>
             <p class="party-note">Maksimal {{ $restaurant->max_party_size }} orang per kelompok. Satu kelompok, satu nomor antrean.</p>
         </div>
     </article>

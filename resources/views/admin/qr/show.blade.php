@@ -9,7 +9,7 @@
         <h2>{{ $restaurant->name }}</h2>
         <img src="{{ route('admin.qr.image', $restaurant) }}" width="360" height="360" alt="QR antrean {{ $restaurant->name }}">
         <h3>Scan. Daftar. Santai.</h3>
-        <p>Scan QR, lanjutkan lewat WhatsApp.<br>Kami kabari saat giliran Anda.</p>
+        <p>Scan QR, isi jumlah tamu dan email.<br>Kami kirim email saat giliran Anda.</p>
         <small>{{ $url }}</small>
     </section>
     <div class="qr-actions no-print">

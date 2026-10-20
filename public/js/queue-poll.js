@@ -14,7 +14,7 @@ if (ticketPanel) {
             document.querySelector('[data-ticket-cancel]')?.toggleAttribute('hidden', !active);
             document.querySelector('[data-ticket-message]').textContent = data.status === 'called'
                 ? 'Giliran Anda sudah tiba. Silakan menuju staf outlet.'
-                : active ? 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui WhatsApp.' : 'Antrean ini sudah berakhir. Terima kasih sudah menggunakan SatSet.';
+                : active ? (ticketPanel.dataset.notify === 'email' ? 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui email.' : 'Tunggu dengan nyaman. Simpan halaman ini untuk memantau antrean Anda.') : 'Antrean ini sudah berakhir. Terima kasih sudah menggunakan SatSet.';
             document.querySelector('[data-live-note]').textContent = 'Terakhir diperbarui ' + new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'});
         } catch {
             document.querySelector('[data-live-note]').textContent = 'Belum dapat memperbarui antrean. Mencoba kembali...';

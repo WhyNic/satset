@@ -4,7 +4,7 @@
             <p class="eyebrow">VIRTUAL QUEUE FOR F&amp;B</p>
             <h1>SatSet<span class="accent">.</span></h1>
             <p class="hero-title">Antre tanpa harus<br>berdiri menunggu.</p>
-            <p class="hero-description">Scan QR di tempat makan favorit Anda. Daftar dan tunggu kabar giliran lewat WhatsApp.</p>
+            <p class="hero-description">Scan QR di tempat makan favorit Anda. Daftar dengan email dan tunggu kabar giliran.</p>
             <a class="button button-green" href="#outlets">Temukan tempat makan <span aria-hidden="true">&darr;</span></a>
             <div class="hero-notes"><span>Tanpa akun</span><span>Tanpa install aplikasi</span></div>
         </div>

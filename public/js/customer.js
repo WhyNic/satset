@@ -59,6 +59,7 @@ if (outlet) {
             const status = outlet.querySelector('[data-outlet-availability]');
             status.textContent = data.available ? 'Antrean sedang dibuka' : 'Antrean sedang ditutup';
             status.classList.toggle('closed', !data.available);
+            outlet.querySelector('[data-outlet-join]')?.toggleAttribute('hidden', !data.available);
             outlet.querySelector('[data-outlet-cta]')?.toggleAttribute('hidden', !data.available);
             outlet.querySelector('[data-outlet-closed]')?.toggleAttribute('hidden', data.available);
             outlet.querySelector('[data-live-note]').textContent = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'}) + '. Estimasi dapat berubah.';

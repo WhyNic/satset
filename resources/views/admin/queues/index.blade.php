@@ -25,7 +25,7 @@
                         <th>Nomor</th>
                         <th>Restoran</th>
                         <th>Jumlah Tamu</th>
-                        <th>WhatsApp</th>
+                        <th>Kontak</th>
                         <th>Waktu Masuk</th>
                         <th>Status</th>
                     </tr>

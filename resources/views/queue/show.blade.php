@@ -1,5 +1,5 @@
 <x-layouts.customer :title="$ticket->queue_number.' | SatSet'">
-    <section class="ticket-page" data-status-url="{{ route('queue.status', $ticket->public_token) }}" data-initial-status="{{ $ticket->status }}">
+    <section class="ticket-page" data-status-url="{{ route('queue.status', $ticket->public_token) }}" data-initial-status="{{ $ticket->status }}" data-notify="{{ $ticket->email ? 'email' : 'none' }}">
         <a class="text-link" href="{{ route('outlets.show', $ticket->restaurant->slug) }}">&larr; {{ $ticket->restaurant->name }}</a>
         <div class="ticket-heading"><p class="eyebrow">ANTREAN ANDA</p><h1>{{ $ticket->restaurant->name }}</h1><span class="availability" data-ticket-status>{{ ['waiting'=>'Menunggu','called'=>'Giliran Anda','completed'=>'Selesai','cancelled'=>'Dibatalkan','skipped'=>'Dilewati'][$ticket->status] }}</span></div>
         <div class="ticket-number">{{ $ticket->queue_number }}</div>
@@ -11,7 +11,7 @@
         @if(session('status'))
             <p class="live-note" role="status">{{ session('status') }}</p>
         @endif
-        <p class="ticket-message" data-ticket-message>{{ $ticket->status === 'called' ? 'Giliran Anda sudah tiba. Silakan menuju staf outlet.' : ($ticket->isActive() ? ($ticket->email ? 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui email.' : 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui WhatsApp.') : 'Antrean ini sudah berakhir. Terima kasih sudah menggunakan SatSet.') }}</p>
+        <p class="ticket-message" data-ticket-message>{{ $ticket->status === 'called' ? 'Giliran Anda sudah tiba. Silakan menuju staf outlet.' : ($ticket->isActive() ? ($ticket->email ? 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui email.' : 'Tunggu dengan nyaman. Simpan halaman ini untuk memantau antrean Anda.') : 'Antrean ini sudah berakhir. Terima kasih sudah menggunakan SatSet.') }}</p>
         <p class="live-note" data-live-note>Estimasi diperbarui berkala.</p>
         @if($ticket->email)
             <p class="live-note" data-ticket-email>Email pemberitahuan: {{ $ticket->maskedEmail() }}</p>

@@ -55,7 +55,7 @@
                     <tr>
                         <th>Nomor</th>
                         <th>Jumlah Tamu</th>
-                        <th>WhatsApp</th>
+                        <th>Kontak</th>
                         <th>Waktu Masuk</th>
                         <th>Status</th>
                         <th>Action</th>
