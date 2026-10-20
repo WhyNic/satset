@@ -15,6 +15,7 @@
                     <tr>
                         <th>Nama</th>
                         <th>Category</th>
+                        <th>Mode</th>
                         <th>Maks. Tamu</th>
                         <th>Prefix</th>
                         <th>Average Service Time</th>
@@ -28,7 +29,8 @@
                         <tr>
                             <td><strong>{{ $restaurant->name }}</strong></td>
                             <td>{{ $restaurant->category }}</td>
-                            <td>{{ $restaurant->max_party_size }} orang</td>
+                            <td>{{ $restaurant->isPickup() ? 'Ambil di counter' : 'Antrean meja' }}</td>
+                            <td>{{ $restaurant->isPickup() ? '-' : $restaurant->max_party_size.' orang' }}</td>
                             <td>{{ $restaurant->prefix }}</td>
                             <td>{{ $restaurant->average_service_minutes }} menit</td>
                             <td>{{ $restaurant->queue_open ? 'Dibuka' : 'Ditutup' }}</td>

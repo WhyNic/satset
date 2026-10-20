@@ -24,7 +24,7 @@
                     <tr>
                         <th>Nomor</th>
                         <th>Restoran</th>
-                        <th>Jumlah Tamu</th>
+                        <th>Jumlah / Pesanan</th>
                         <th>Kontak</th>
                         <th>Waktu Masuk</th>
                         <th>Status</th>
@@ -35,8 +35,8 @@
                         <tr>
                             <td><strong>{{ $ticket->queue_number }}</strong></td>
                             <td>{{ $ticket->restaurant?->name ?? '-' }}</td>
-                            <td>{{ $ticket->party_size }} orang</td>
-                            <td>{{ $ticket->maskedPhoneNumber() ?? $ticket->maskedEmail() ?? 'Tidak tersedia' }}</td>
+                            <td>{{ $ticket->restaurant?->isPickup() ? '1 pesanan' : $ticket->party_size.' orang' }}</td>
+                            <td>{{ $ticket->maskedPhoneNumber() ?? $ticket->maskedEmail() ?? 'Tidak tersedia' }}@if($ticket->maskedEmail())<br><small>Email terkirim: {{ $ticket->deliveredEmailCount() }}</small>@endif</td>
                             <td>{{ $ticket->joined_at?->format('d M H:i') ?? '-' }}</td>
                             <td><span class="admin-status admin-status-{{ $ticket->status }}">{{ ucfirst($ticket->status) }}</span></td>
                         </tr>

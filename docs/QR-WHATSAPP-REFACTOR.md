@@ -11,6 +11,10 @@
   each event is sent at most once. Failed sends release the claim and retry. The
   kill switch is `EMAIL_ALERTS_ENABLED`.
 - `party_size` is guests in one group, not the number of tickets.
+- `restaurants.queue_mode` decides the flow. `seating` asks for party size and talks
+  about seats. `pickup` asks only for an email, stores one order, and talks about
+  collecting food at the counter. Admin screens and customer screens follow the same
+  mode.
 - Outlet slugs stay stable when names change so printed QR codes remain valid.
 - Existing restaurants, tickets and historical migrations are preserved.
 - Database additions use forward migrations. Only the retired subscription

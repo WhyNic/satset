@@ -44,7 +44,7 @@ class QueueEmail extends Mailable
             TicketEmailEvent::JOINED => "Antrean {$number} di {$name} sudah dibuat",
             TicketEmailEvent::THREE_AHEAD => "Tinggal 3 antrean lagi, {$number}",
             TicketEmailEvent::ONE_AHEAD => "Tinggal 1 antrean lagi, {$number}",
-            TicketEmailEvent::CALLED => "Giliran {$number} sudah tiba",
+            TicketEmailEvent::CALLED => $this->ticket->restaurant->isPickup() ? "Pesanan {$number} siap diambil" : "Giliran {$number} sudah tiba",
             TicketEmailEvent::CANCELLED => "Antrean {$number} dibatalkan",
         };
     }
@@ -61,16 +61,15 @@ class QueueEmail extends Mailable
             TicketEmailEvent::JOINED => $this->joinedLines($number, $name),
             TicketEmailEvent::THREE_AHEAD => [
                 "Tinggal 3 antrean lagi sebelum giliran {$number} di {$name}.",
-                "Silakan bersiap menuju {$name}.",
+                $this->ticket->restaurant->isPickup() ? "Silakan bersiap di {$name}." : "Silakan bersiap menuju {$name}.",
             ],
             TicketEmailEvent::ONE_AHEAD => [
                 "Tinggal 1 antrean lagi sebelum {$number}.",
-                "Silakan bersiap menuju {$name}.",
+                $this->ticket->restaurant->isPickup() ? "Silakan bersiap di {$name}." : "Silakan bersiap menuju {$name}.",
             ],
-            TicketEmailEvent::CALLED => [
-                "Giliran {$number} sudah tiba!",
-                "Silakan menuju {$name}.",
-            ],
+            TicketEmailEvent::CALLED => $this->ticket->restaurant->isPickup()
+                ? ["Pesanan {$number} siap!", "Silakan ambil di {$name}."]
+                : ["Giliran {$number} sudah tiba!", "Silakan menuju {$name}."],
             TicketEmailEvent::CANCELLED => [
                 "Antrean {$number} di {$name} telah dibatalkan.",
             ],
@@ -86,12 +85,13 @@ class QueueEmail extends Mailable
         $before = max($queue->calculateCustomerPosition($this->ticket) - 1, 0);
         $estimate = $queue->calculateEstimatedWait($this->ticket->restaurant, $this->ticket);
 
-        return [
+        return array_values(array_filter([
             "Antrean Anda di {$name} sudah dibuat.",
             "Nomor antrean: {$number}",
-            "Jumlah tamu: {$this->ticket->party_size} orang",
+            // Pickup outlets have no seats, so the party size is not part of the message.
+            $this->ticket->restaurant->isPickup() ? null : "Jumlah tamu: {$this->ticket->party_size} orang",
             "Antrean di depan Anda: {$before}",
             "Estimasi waktu tunggu: +/- {$estimate} menit",
-        ];
+        ]));
     }
 }

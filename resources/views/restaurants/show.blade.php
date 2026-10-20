@@ -22,10 +22,12 @@
                     <a class="button button-outline" href="{{ route('outlets.whatsapp', $restaurant->slug) }}" @if(!$snapshot['available']) hidden @endif data-outlet-cta>Lanjut via WhatsApp</a>
                 @endif
                 <p data-outlet-closed @if($snapshot['available']) hidden @endif>Antrean sedang ditutup. Silakan hubungi staf outlet.</p>
-                <small>Tanpa login. Isi jumlah tamu dan email, lalu nomor antrean dibuat setelah Anda kirim.</small>
+                <small>Tanpa login. {{ $restaurant->isPickup() ? 'Isi email Anda, lalu nomor pesanan dibuat setelah Anda kirim.' : 'Isi jumlah tamu dan email, lalu nomor antrean dibuat setelah Anda kirim.' }}</small>
             </div>
-            <div class="outlet-next"><div><span class="step-number">01</span><p><strong>Isi jumlah tamu dan email</strong><span>Konfirmasi dan posisi antrean dikirim ke email Anda.</span></p></div><div><span class="step-number">02</span><p><strong>Nikmati waktu Anda</strong><span>Kami kirim email saat giliran sudah dekat.</span></p></div></div>
-            <p class="party-note">Maksimal {{ $restaurant->max_party_size }} orang per kelompok. Satu kelompok, satu nomor antrean.</p>
+            <div class="outlet-next"><div><span class="step-number">01</span>@if($restaurant->isPickup())<p><strong>Isi email Anda</strong><span>Konfirmasi dan nomor pesanan dikirim ke email Anda.</span></p>@else<p><strong>Isi jumlah tamu dan email</strong><span>Konfirmasi dan posisi antrean dikirim ke email Anda.</span></p>@endif</div><div><span class="step-number">02</span>@if($restaurant->isPickup())<p><strong>Ambil pesanan Anda</strong><span>Kami kirim email saat pesanan siap di counter.</span></p>@else<p><strong>Nikmati waktu Anda</strong><span>Kami kirim email saat giliran sudah dekat.</span></p>@endif</div></div>
+            @unless($restaurant->isPickup())
+                <p class="party-note">Maksimal {{ $restaurant->max_party_size }} orang per kelompok. Satu kelompok, satu nomor antrean.</p>
+            @endunless
         </div>
     </article>
 </x-layouts.customer>

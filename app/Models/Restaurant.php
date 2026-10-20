@@ -10,7 +10,12 @@ class Restaurant extends Model
 {
     use HasFactory;
 
+    public const MODE_SEATING = 'seating';
+    public const MODE_PICKUP = 'pickup';
+    public const MODES = [self::MODE_SEATING, self::MODE_PICKUP];
+
     protected $fillable = [
+        'queue_mode',
         'name',
         'slug',
         'category',
@@ -33,6 +38,11 @@ class Restaurant extends Model
             'queue_open' => 'boolean',
             'max_party_size' => 'integer',
         ];
+    }
+
+    public function isPickup(): bool
+    {
+        return $this->queue_mode === self::MODE_PICKUP;
     }
 
     public function queueTickets(): HasMany

@@ -16,6 +16,7 @@ class AdminQueueController extends Controller
         $waiting = $restaurant->queueTickets()->where('status', QueueTicket::STATUS_WAITING)->orderBy('sequence_number')->get();
         $activeTickets = $restaurant->queueTickets()
             ->whereIn('status', [QueueTicket::STATUS_CALLED, QueueTicket::STATUS_WAITING])
+            ->with('emailEvents')
             ->orderBy('sequence_number')
             ->get();
         $snapshot = $queueService->getRestaurantSnapshot($restaurant);

@@ -23,15 +23,17 @@ class EmailJoinController extends Controller
     {
         abort_unless($restaurant->active, 404);
 
-        $data = $request->validate([
-            'party_size' => ['required', 'integer', 'min:1', 'max:'.$restaurant->max_party_size],
-            'email' => ['required', 'string', 'email:rfc', 'max:254'],
-        ]);
+        // Pickup outlets have no seats, so there is no party to count: one order, one number.
+        $rules = ['email' => ['required', 'string', 'email:rfc', 'max:254']];
+        if (! $restaurant->isPickup()) {
+            $rules['party_size'] = ['required', 'integer', 'min:1', 'max:'.$restaurant->max_party_size];
+        }
+        $data = $request->validate($rules);
 
         // A ticket exists only after this explicit submit. Opening the page never creates one.
         $ticket = $queueService->createTicket(
             $restaurant,
-            partySize: (int) $data['party_size'],
+            partySize: $restaurant->isPickup() ? 1 : (int) $data['party_size'],
             email: $data['email'],
         );
         $emails->joined($ticket);

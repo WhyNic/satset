@@ -54,7 +54,7 @@
                 <thead>
                     <tr>
                         <th>Nomor</th>
-                        <th>Jumlah Tamu</th>
+                        <th>{{ $restaurant->isPickup() ? 'Pesanan' : 'Jumlah Tamu' }}</th>
                         <th>Kontak</th>
                         <th>Waktu Masuk</th>
                         <th>Status</th>
@@ -65,8 +65,8 @@
                     @forelse ($activeTickets as $ticket)
                         <tr>
                             <td><strong>{{ $ticket->queue_number }}</strong></td>
-                            <td>{{ $ticket->party_size }} orang</td>
-                            <td>{{ $ticket->maskedPhoneNumber() ?? $ticket->maskedEmail() ?? 'Tidak tersedia' }}</td>
+                            <td>{{ $restaurant->isPickup() ? '1 pesanan' : $ticket->party_size.' orang' }}</td>
+                            <td>{{ $ticket->maskedPhoneNumber() ?? $ticket->maskedEmail() ?? 'Tidak tersedia' }}@if($ticket->maskedEmail())<br><small>Email terkirim: {{ $ticket->deliveredEmailCount() }}</small>@endif</td>
                             <td>{{ $ticket->joined_at?->format('H:i') ?? '-' }}</td>
                             <td><span class="admin-status admin-status-{{ $ticket->status }}">{{ ucfirst($ticket->status) }}</span></td>
                             <td class="admin-inline-actions">

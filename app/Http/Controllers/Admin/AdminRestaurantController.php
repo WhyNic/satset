@@ -72,6 +72,7 @@ class AdminRestaurantController extends Controller
             'active' => ['nullable', 'boolean'],
             'max_party_size' => ['required', 'integer', 'min:1', 'max:100'],
             'queue_open' => ['nullable', 'boolean'],
+            'queue_mode' => ['required', Rule::in(Restaurant::MODES)],
         ]);
 
         $validated['prefix'] = strtoupper($validated['prefix']);

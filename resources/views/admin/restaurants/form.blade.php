@@ -28,7 +28,14 @@
             </div>
             <input type="hidden" name="active" value="0">
             <label class="admin-checkbox"><input type="checkbox" name="active" value="1" @checked(old('active', $restaurant->active ?? true))> Active</label>
-            <label>Jumlah tamu maksimal per kelompok <input type="number" name="max_party_size" min="1" max="100" value="{{ old('max_party_size', $restaurant->max_party_size ?? 6) }}" required>@error('max_party_size')<small>{{ $message }}</small>@enderror</label>
+            <label>Mode antrean
+                <select name="queue_mode" required>
+                    <option value="seating" @selected(old('queue_mode', $restaurant->queue_mode ?? 'seating') === 'seating')>Antrean meja (ada kursi, customer mengisi jumlah tamu)</option>
+                    <option value="pickup" @selected(old('queue_mode', $restaurant->queue_mode ?? 'seating') === 'pickup')>Ambil di counter (tanpa kursi, customer mengambil pesanan)</option>
+                </select>
+                @error('queue_mode')<small>{{ $message }}</small>@enderror
+            </label>
+            <label>Jumlah tamu maksimal per kelompok (hanya untuk antrean meja) <input type="number" name="max_party_size" min="1" max="100" value="{{ old('max_party_size', $restaurant->max_party_size ?? 6) }}" required>@error('max_party_size')<small>{{ $message }}</small>@enderror</label>
             <input type="hidden" name="queue_open" value="0">
             <label class="admin-checkbox"><input type="checkbox" name="queue_open" value="1" @checked(old('queue_open', $restaurant->queue_open ?? true))> Buka pendaftaran antrean</label>
             <button class="admin-primary-button" type="submit">Simpan</button>

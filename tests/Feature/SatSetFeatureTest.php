@@ -110,7 +110,7 @@ class SatSetFeatureTest extends TestCase
     public function test_restaurant_max_party_size_is_editable_and_qr_slug_is_stable(): void
     {
         $restaurant = $this->restaurant();
-        $data = $restaurant->only(['name','category','prefix','average_service_minutes','max_wait_minutes','active','queue_open']);
+        $data = [...$restaurant->only(['name','category','prefix','average_service_minutes','max_wait_minutes','active','queue_open']), 'queue_mode' => 'seating'];
         $this->actingAs(User::factory()->create())->put(route('admin.restaurants.update', $restaurant), [
             ...$data, 'name' => 'Nama Baru', 'max_party_size' => 9,
         ])->assertRedirect(route('admin.restaurants.index'));

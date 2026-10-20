@@ -29,7 +29,13 @@
             <h1>Ambil antrean lewat email</h1>
         </div>
 
-        <p class="lead">Masukkan jumlah tamu dan email Anda. Kami kirim konfirmasi, posisi antrean, dan pemberitahuan saat giliran mendekat.</p>
+        <p class="lead">
+            @if($restaurant->isPickup())
+                Masukkan email Anda. Kami kirim konfirmasi, nomor pesanan, dan pemberitahuan saat pesanan siap diambil.
+            @else
+                Masukkan jumlah tamu dan email Anda. Kami kirim konfirmasi, posisi antrean, dan pemberitahuan saat giliran mendekat.
+            @endif
+        </p>
 
         <div class="join-stats">
             <div><span>Sedang menunggu</span><strong>{{ $snapshot['waiting_count'] }} antrean</strong></div>
@@ -43,16 +49,18 @@
         <form method="post" action="{{ route('outlets.join.store', $restaurant->slug) }}" class="join-form">
             @csrf
 
-            <label class="join-field">
-                <span>Jumlah tamu</span>
-                <select name="party_size" required aria-describedby="party-help">
-                    @for ($i = 1; $i <= $restaurant->max_party_size; $i++)
-                        <option value="{{ $i }}" @selected((int) old('party_size', 1) === $i)>{{ $i }} orang</option>
-                    @endfor
-                </select>
-                <small id="party-help">Maksimal {{ $restaurant->max_party_size }} orang per kelompok. Satu kelompok, satu nomor antrean.</small>
-                @error('party_size')<span class="join-error" role="alert">{{ $message }}</span>@enderror
-            </label>
+            @unless($restaurant->isPickup())
+                <label class="join-field">
+                    <span>Jumlah tamu</span>
+                    <select name="party_size" required aria-describedby="party-help">
+                        @for ($i = 1; $i <= $restaurant->max_party_size; $i++)
+                            <option value="{{ $i }}" @selected((int) old('party_size', 1) === $i)>{{ $i }} orang</option>
+                        @endfor
+                    </select>
+                    <small id="party-help">Maksimal {{ $restaurant->max_party_size }} orang per kelompok. Satu kelompok, satu nomor antrean.</small>
+                    @error('party_size')<span class="join-error" role="alert">{{ $message }}</span>@enderror
+                </label>
+            @endunless
 
             <label class="join-field">
                 <span>Email</span>

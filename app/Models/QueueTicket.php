@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Support\Masking;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class QueueTicket extends Model
@@ -64,6 +65,19 @@ class QueueTicket extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function emailEvents(): HasMany
+    {
+        return $this->hasMany(TicketEmailEvent::class, 'queue_ticket_id');
+    }
+
+    /**
+     * Number of emails actually delivered for this ticket. Staff use it to see whether the customer was reached.
+     */
+    public function deliveredEmailCount(): int
+    {
+        return $this->emailEvents->whereNotNull('sent_at')->count();
     }
 
     public function isActive(): bool

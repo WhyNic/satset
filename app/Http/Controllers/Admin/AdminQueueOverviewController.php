@@ -14,7 +14,7 @@ class AdminQueueOverviewController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $tickets = QueueTicket::query()
-            ->with('restaurant')
+            ->with(['restaurant', 'emailEvents'])
             ->when(in_array($status, ['waiting', 'called', 'completed', 'cancelled', 'skipped'], true), function ($query) use ($status): void {
                 $query->where('status', $status);
             })
