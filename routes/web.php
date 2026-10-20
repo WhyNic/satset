@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\AdminQueueOverviewController;
 use App\Http\Controllers\Admin\AdminRestaurantController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\WhatsAppWebhookController;
-use App\Http\Controllers\Admin\AdminWhatsAppLogController;
 use App\Http\Controllers\Admin\AdminQrController;
 use App\Http\Controllers\EmailJoinController;
 use App\Http\Controllers\QueueController;
@@ -63,7 +62,6 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
 
         Route::get('/queues', AdminQueueOverviewController::class)
             ->name('queues.index');
-        Route::get('/whatsapp-logs', AdminWhatsAppLogController::class)->name('whatsapp-logs.index');
         Route::get('/qr', [AdminQrController::class, 'index'])->name('qr.index');
         Route::get('/restaurants/{restaurant}/qr', [AdminQrController::class, 'show'])->name('qr.show');
         Route::get('/restaurants/{restaurant}/qr.svg', [AdminQrController::class, 'image'])->name('qr.image');

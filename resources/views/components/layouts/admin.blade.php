@@ -23,9 +23,6 @@
                 <a @class(['active' => request()->routeIs('admin.dashboard')]) href="{{ route('admin.dashboard') }}">Dashboard</a>
                 <a @class(['active' => request()->routeIs('admin.queues.*')]) href="{{ route('admin.queues.index') }}">Antrean</a>
                 <a @class(['active' => request()->routeIs('admin.restaurants.*')]) href="{{ route('admin.restaurants.index') }}">Restoran</a>
-                @if(app(\App\Services\WhatsAppService::class)->ready())
-                    <a @class(['active' => request()->routeIs('admin.whatsapp-logs.*')]) href="{{ route('admin.whatsapp-logs.index') }}">WhatsApp Logs</a>
-                @endif
                 <a @class(['active' => request()->routeIs('admin.qr.*')]) href="{{ route('admin.qr.index') }}">QR Code</a>
             </nav>
 

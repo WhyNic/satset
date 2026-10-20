@@ -94,7 +94,7 @@ class SatSetFeatureTest extends TestCase
     public function test_all_admin_pages_require_authentication_and_work_after_login(): void
     {
         $restaurant = $this->restaurant();
-        $paths = ['/admin', '/admin/dashboard', '/admin/queues', '/admin/restaurants', '/admin/whatsapp-logs', '/admin/qr', "/admin/restaurants/{$restaurant->id}/queue", "/admin/restaurants/{$restaurant->id}/qr"];
+        $paths = ['/admin', '/admin/dashboard', '/admin/queues', '/admin/restaurants', '/admin/qr', "/admin/restaurants/{$restaurant->id}/queue", "/admin/restaurants/{$restaurant->id}/qr"];
         foreach ($paths as $path) {
             $this->get($path)->assertRedirect(route('admin.login'));
         }

@@ -184,7 +184,7 @@ class WhatsAppFlowTest extends TestCase
         $this->assertSame('called', $ticket->fresh()->status);
         $this->assertNull($ticket->fresh()->called_notified_at);
         $this->assertDatabaseHas('whatsapp_logs', ['queue_ticket_id'=>$ticket->id,'status'=>'failed','error_code'=>'http_500']);
-        $this->get(route('admin.whatsapp-logs.index'))->assertOk()->assertDontSee('fake-test-token');
+        WhatsappLog::query()->get()->each(fn (WhatsappLog $log) => $this->assertStringNotContainsString('fake-test-token', json_encode($log->getAttributes())));
         Http::assertSentCount(1);
     }
 

@@ -172,17 +172,16 @@ class EmailFlowChaosTest extends TestCase
             ->assertSee('Lanjut via WhatsApp');
     }
 
-    public function test_admin_hides_the_whatsapp_logs_menu_until_whatsapp_is_ready(): void
+    public function test_admin_has_no_whatsapp_logs_page_or_menu_even_when_whatsapp_is_configured(): void
     {
-        $admin = User::factory()->create();
-
-        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('WhatsApp Logs');
-
         config([
             'whatsapp.enabled' => true, 'whatsapp.access_token' => 'fake-test-token',
             'whatsapp.phone_number_id' => '12345', 'whatsapp.api_version' => 'v23.0',
         ]);
-        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertSee('WhatsApp Logs');
+        $admin = User::factory()->create();
+
+        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('WhatsApp Logs');
+        $this->actingAs($admin)->get('/admin/whatsapp-logs')->assertNotFound();
     }
 
     public function test_ticket_page_names_the_channel_the_customer_will_actually_receive_updates_on(): void
