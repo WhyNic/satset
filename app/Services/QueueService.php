@@ -175,6 +175,8 @@ class QueueService
         $ticket = $ticket->fresh('restaurant');
         if ($changed) {
             $this->afterChange($ticket->restaurant, $ticket, 'cancelled');
+            // Cleared only after the cancellation notice has been queued, which still needs the number.
+            $ticket->update(['phone_number' => null]);
         }
 
         return $ticket;
@@ -220,6 +222,7 @@ class QueueService
             $ticket->update([
                 'status' => $status,
                 $timestampColumn => now(),
+                'phone_number' => null,
             ]);
 
             return $ticket->fresh('restaurant');

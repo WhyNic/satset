@@ -66,7 +66,7 @@
                         <tr>
                             <td><strong>{{ $ticket->queue_number }}</strong></td>
                             <td>{{ $ticket->party_size }} orang</td>
-                            <td>{{ $ticket->phone_number ?? 'Tidak tersedia' }}</td>
+                            <td>{{ $ticket->maskedPhoneNumber() ?? 'Tidak tersedia' }}</td>
                             <td>{{ $ticket->joined_at?->format('H:i') ?? '-' }}</td>
                             <td><span class="admin-status admin-status-{{ $ticket->status }}">{{ ucfirst($ticket->status) }}</span></td>
                             <td class="admin-inline-actions">

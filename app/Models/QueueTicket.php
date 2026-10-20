@@ -68,4 +68,19 @@ class QueueTicket extends Model
     {
         return in_array($this->status, [self::STATUS_WAITING, self::STATUS_CALLED], true);
     }
+
+    public function maskedPhoneNumber(): ?string
+    {
+        $phone = $this->phone_number;
+
+        if (! $phone) {
+            return null;
+        }
+
+        if (strlen($phone) < 8) {
+            return str_repeat('*', strlen($phone));
+        }
+
+        return Str::mask($phone, '*', 4, strlen($phone) - 7);
+    }
 }
