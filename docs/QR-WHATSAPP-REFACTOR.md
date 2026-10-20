@@ -5,7 +5,11 @@
 - Laravel remains the application framework.
 - `/r/{restaurant:slug}` is the public, stable outlet entry point.
 - Opening a page or following a WhatsApp link never creates a ticket.
-- Only a confirmed chatbot conversation creates a ticket.
+- Only a confirmed chatbot conversation or an explicit submit of the email join
+  form (`/r/{restaurant:slug}/join`) creates a ticket. Opening the join form never does.
+- Email alerts go through a queued job with a unique `(ticket, event)` claim, so
+  each event is sent at most once. Failed sends release the claim and retry. The
+  kill switch is `EMAIL_ALERTS_ENABLED`.
 - `party_size` is guests in one group, not the number of tickets.
 - Outlet slugs stay stable when names change so printed QR codes remain valid.
 - Existing restaurants, tickets and historical migrations are preserved.

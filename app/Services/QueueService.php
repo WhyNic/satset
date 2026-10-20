@@ -86,9 +86,9 @@ class QueueService
             ->first();
     }
 
-    public function createTicket(Restaurant $restaurant, ?string $name = null, ?string $phone = null, int $partySize = 1): QueueTicket
+    public function createTicket(Restaurant $restaurant, ?string $name = null, ?string $phone = null, int $partySize = 1, ?string $email = null): QueueTicket
     {
-        return DB::transaction(function () use ($restaurant, $name, $phone, $partySize): QueueTicket {
+        return DB::transaction(function () use ($restaurant, $name, $phone, $partySize, $email): QueueTicket {
             $restaurant = Restaurant::query()->lockForUpdate()->findOrFail($restaurant->id);
             if (! $restaurant->active || ! $restaurant->queue_open) {
                 throw ValidationException::withMessages(['restaurant' => 'Antrean outlet sedang ditutup.']);
@@ -99,12 +99,17 @@ class QueueService
             if ($phone && ($existing = $this->findActiveTicketForPhone($restaurant, $phone))) {
                 return $existing;
             }
+            $email = $email ? $this->normalizeEmail($email) : null;
+            if ($email && $this->activeTicketCountForEmail($restaurant, $email) >= config('email_alerts.max_active_per_email')) {
+                throw ValidationException::withMessages(['email' => 'Email ini sudah punya antrean aktif di outlet ini. Selesaikan atau batalkan antrean tersebut dulu.']);
+            }
             $number = $this->generateQueueNumber($restaurant);
 
             return QueueTicket::query()->create([
                 'restaurant_id' => $restaurant->id,
                 'customer_name' => $name ?: null,
                 'phone_number' => $phone ? $this->normalizePhoneNumber($phone) : null,
+                'email' => $email,
                 'party_size' => $partySize,
                 'queue_number' => $number['queue_number'],
                 'sequence_number' => $number['sequence_number'],
@@ -175,8 +180,8 @@ class QueueService
         $ticket = $ticket->fresh('restaurant');
         if ($changed) {
             $this->afterChange($ticket->restaurant, $ticket, 'cancelled');
-            // Cleared only after the cancellation notice has been queued, which still needs the number.
-            $ticket->update(['phone_number' => null]);
+            // Cleared only after the cancellation notices have been queued, which still need the contact details.
+            $ticket->update(['phone_number' => null, 'email' => null]);
         }
 
         return $ticket;
@@ -205,6 +210,20 @@ class QueueService
         return str_starts_with($digits, '0') ? '62'.substr($digits, 1) : $digits;
     }
 
+    public function normalizeEmail(string $email): string
+    {
+        return strtolower(trim($email));
+    }
+
+    private function activeTicketCountForEmail(Restaurant $restaurant, string $email): int
+    {
+        return QueueTicket::query()
+            ->where('restaurant_id', $restaurant->id)
+            ->where('email', $email)
+            ->whereIn('status', [QueueTicket::STATUS_WAITING, QueueTicket::STATUS_CALLED])
+            ->count();
+    }
+
     private function transitionCurrent(Restaurant $restaurant, string $status, string $timestampColumn): ?QueueTicket
     {
         $ticket = DB::transaction(function () use ($restaurant, $status, $timestampColumn): ?QueueTicket {
@@ -223,6 +242,7 @@ class QueueService
                 'status' => $status,
                 $timestampColumn => now(),
                 'phone_number' => null,
+                'email' => null,
             ]);
 
             return $ticket->fresh('restaurant');
@@ -249,5 +269,7 @@ class QueueService
         } catch (Throwable) {
             Log::error('Queue updated but notification scheduling failed', ['restaurant_id' => $restaurant->id]);
         }
+
+        app(QueueEmailNotificationService::class)->afterChange($restaurant, $this, $ticket, $event);
     }
 }

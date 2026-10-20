@@ -22,6 +22,7 @@ class QueueTicket extends Model
         'restaurant_id',
         'customer_name',
         'phone_number',
+        'email',
         'party_size',
         'queue_number',
         'sequence_number',
@@ -82,5 +83,16 @@ class QueueTicket extends Model
         }
 
         return Str::mask($phone, '*', 4, strlen($phone) - 7);
+    }
+
+    public function maskedEmail(): ?string
+    {
+        if (! $this->email || ! str_contains($this->email, '@')) {
+            return null;
+        }
+
+        [$local, $domain] = explode('@', $this->email, 2);
+
+        return Str::substr($local, 0, 1).str_repeat('*', max(strlen($local) - 1, 1)).'@'.$domain;
     }
 }

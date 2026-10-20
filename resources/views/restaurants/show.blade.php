@@ -24,6 +24,9 @@
                     <button class="button button-green whatsapp-cta" type="button" disabled>Lanjut via WhatsApp</button>
                     <p class="notice">Pendaftaran WhatsApp belum tersedia. Silakan hubungi staf outlet.</p>
                 @endif
+                @if($snapshot['available'])
+                    <a class="button button-outline" href="{{ route('outlets.join', $restaurant->slug) }}" data-outlet-join>Ambil antrean lewat email</a>
+                @endif
                 <small>Tanpa login. Nomor antrean dibuat setelah Anda konfirmasi.</small>
             </div>
             <div class="outlet-next"><div><span class="step-number">01</span><p><strong>Lanjutkan di WhatsApp</strong><span>Pilih jumlah tamu dan konfirmasi antrean Anda.</span></p></div><div><span class="step-number">02</span><p><strong>Nikmati waktu Anda</strong><span>Kami kabari saat giliran sudah dekat.</span></p></div></div>

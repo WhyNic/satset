@@ -22,7 +22,8 @@ class AdminQueueOverviewController extends Controller
                 $query->where(function ($query) use ($search): void {
                     $query->where('queue_number', 'like', "%{$search}%")
                         ->orWhere('customer_name', 'like', "%{$search}%")
-                        ->orWhere('phone_number', 'like', "%{$search}%");
+                        ->orWhere('phone_number', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
                 });
             })
             ->latest('joined_at')

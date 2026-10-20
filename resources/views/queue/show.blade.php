@@ -8,8 +8,14 @@
             <div><span>Antrean di depan</span><strong data-ticket-before>{{ max($position - 1, 0) }}</strong></div>
             <div><span>Estimasi waktu</span><strong><span data-ticket-estimate>{{ $estimatedWait }}</span> <small>menit</small></strong></div>
         </div>
-        <p class="ticket-message" data-ticket-message>{{ $ticket->status === 'called' ? 'Giliran Anda sudah tiba. Silakan menuju staf outlet.' : ($ticket->isActive() ? 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui WhatsApp.' : 'Antrean ini sudah berakhir. Terima kasih sudah menggunakan SatSet.') }}</p>
+        @if(session('status'))
+            <p class="live-note" role="status">{{ session('status') }}</p>
+        @endif
+        <p class="ticket-message" data-ticket-message>{{ $ticket->status === 'called' ? 'Giliran Anda sudah tiba. Silakan menuju staf outlet.' : ($ticket->isActive() ? ($ticket->email ? 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui email.' : 'Tunggu dengan nyaman. Pembaruan antrean dikirim melalui WhatsApp.') : 'Antrean ini sudah berakhir. Terima kasih sudah menggunakan SatSet.') }}</p>
         <p class="live-note" data-live-note>Estimasi diperbarui berkala.</p>
+        @if($ticket->email)
+            <p class="live-note" data-ticket-email>Email pemberitahuan: {{ $ticket->maskedEmail() }}</p>
+        @endif
         @if($ticket->isActive())
             <form method="post" action="{{ route('queue.cancel', $ticket->public_token) }}" data-ticket-cancel onsubmit="return confirm('Batalkan antrean ini?')">@csrf<button class="button button-outline" type="submit">Batalkan antrean</button></form>
         @endif
