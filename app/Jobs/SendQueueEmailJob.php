@@ -18,6 +18,8 @@ class SendQueueEmailJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    private const STALE_AFTER_MINUTES = 10;
+
     public int $tries = 3;
 
     /** @var list<int> */
@@ -45,6 +47,13 @@ class SendQueueEmailJob implements ShouldQueue
                 return;
             }
 
+            if (! $this->stillRelevant($ticket)) {
+                // Settle the event without sending, so an outdated alert is never delivered or retried.
+                $claim->update(['sent_at' => now()]);
+
+                return;
+            }
+
             Mail::to($this->email)->send(new QueueEmail($ticket, $this->event));
             $claim->update(['sent_at' => now()]);
         } catch (Throwable $exception) {
@@ -61,8 +70,22 @@ class SendQueueEmailJob implements ShouldQueue
     }
 
     /**
-     * Returns the claim when this run may send, or null when the event was already sent or is in flight.
-     * A claim left unsent for longer than the stale window (crashed worker) is reclaimed.
+     * A "three ahead" or "one ahead" alert is outdated once the customer is no longer waiting, and a
+     * "called" alert once they are no longer called. Joined and cancelled notices always stay relevant.
+     */
+    private function stillRelevant(QueueTicket $ticket): bool
+    {
+        return match ($this->event) {
+            TicketEmailEvent::JOINED, TicketEmailEvent::CANCELLED => true,
+            TicketEmailEvent::CALLED => $ticket->status === QueueTicket::STATUS_CALLED,
+            TicketEmailEvent::THREE_AHEAD, TicketEmailEvent::ONE_AHEAD => $ticket->status === QueueTicket::STATUS_WAITING,
+        };
+    }
+
+    /**
+     * Returns the claim when this run may send, or null when the event was already settled or is in flight.
+     * A claim left unsent for longer than the stale window (crashed worker) is reclaimed atomically, so only
+     * one worker can take it over.
      */
     private function claim(): ?TicketEmailEvent
     {
@@ -73,13 +96,12 @@ class SendQueueEmailJob implements ShouldQueue
             return $claim;
         }
 
-        $stale = $claim->sent_at === null && $claim->created_at->lt(now()->subMinutes(10));
-        if (! $stale) {
-            return null;
-        }
+        $reclaimed = TicketEmailEvent::query()
+            ->whereKey($claim->id)
+            ->whereNull('sent_at')
+            ->where('created_at', '<', now()->subMinutes(self::STALE_AFTER_MINUTES))
+            ->update(['created_at' => now()]);
 
-        $claim->delete();
-
-        return TicketEmailEvent::query()->create($key);
+        return $reclaimed === 1 ? $claim->fresh() : null;
     }
 }

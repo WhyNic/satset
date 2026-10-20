@@ -18,6 +18,9 @@ Artisan::command('whatsapp:send-pending', function (WhatsAppService $whatsapp): 
 
 Schedule::command('whatsapp:send-pending')->everyMinute()->withoutOverlapping();
 
+// Failed jobs keep their payload, which can include an email address. Prune them daily.
+Schedule::command('queue:prune-failed', ['--hours' => 24])->daily();
+
 Artisan::command('satset:admin {email} {--name=SatSet Admin}', function (): void {
     $email = $this->argument('email');
     if (! filter_var($email, FILTER_VALIDATE_EMAIL) || \App\Models\User::where('email', $email)->exists()) {

@@ -8,6 +8,7 @@ use App\Models\QueueTicket;
 use App\Models\Restaurant;
 use App\Models\TicketEmailEvent;
 use App\Models\User;
+use App\Models\WhatsappLog;
 use App\Services\QueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -137,7 +138,8 @@ class EmailAlertsTest extends TestCase
     {
         $restaurant = $this->restaurant();
 
-        for ($i = 0; $i < 10; $i++) {
+        // Festival venues often share one public IP, so the limit must allow a crowd through.
+        for ($i = 0; $i < 30; $i++) {
             $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 0, 'email' => 'x'])->assertStatus(302);
         }
 
@@ -254,7 +256,7 @@ class EmailAlertsTest extends TestCase
         $ticket = $queue->createTicket($this->restaurant(), email: 'tamu@contoh.test');
 
         for ($i = 0; $i < 3; $i++) {
-            (new SendQueueEmailJob($ticket->id, TicketEmailEvent::CALLED, 'tamu@contoh.test'))->handle();
+            (new SendQueueEmailJob($ticket->id, TicketEmailEvent::JOINED, 'tamu@contoh.test'))->handle();
         }
 
         Mail::assertSentCount(1);
@@ -332,6 +334,30 @@ class EmailAlertsTest extends TestCase
             $this->assertStringContainsString($ticket->queue_number, $text, "{$event} text misses the queue number.");
             $this->assertStringNotContainsString('<html', $text, "{$event} text version contains HTML.");
         }
+    }
+
+    public function test_outdated_alerts_are_settled_without_sending(): void
+    {
+        Mail::fake();
+        $queue = app(QueueService::class);
+        $restaurant = $this->restaurant();
+        $first = $queue->createTicket($restaurant, email: 'pertama@contoh.test');
+        $second = $queue->createTicket($restaurant, email: 'kedua@contoh.test');
+        $queue->callNext($restaurant); // $first is now called and $second is still waiting.
+        Mail::fake(); // Only the outdated jobs below may be observed.
+
+        // "called" for a ticket still waiting is outdated; "three ahead" for a called ticket is outdated too.
+        (new SendQueueEmailJob($second->id, TicketEmailEvent::CALLED, 'kedua@contoh.test'))->handle();
+        (new SendQueueEmailJob($first->id, TicketEmailEvent::THREE_AHEAD, 'pertama@contoh.test'))->handle();
+
+        Mail::assertNothingSent();
+        $this->assertNotNull(TicketEmailEvent::query()->where(['queue_ticket_id' => $second->id, 'event' => TicketEmailEvent::CALLED])->value('sent_at'));
+        $this->assertNotNull(TicketEmailEvent::query()->where(['queue_ticket_id' => $first->id, 'event' => TicketEmailEvent::THREE_AHEAD])->value('sent_at'));
+    }
+
+    public function test_whatsapp_log_numbers_are_masked_for_staff(): void
+    {
+        $this->assertSame('6281******890', (new WhatsappLog(['phone_number' => '6281234567890']))->maskedPhoneNumber());
     }
 
     public function test_masking_and_normalization_helpers(): void

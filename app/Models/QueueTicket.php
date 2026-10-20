@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Masking;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
@@ -72,27 +73,11 @@ class QueueTicket extends Model
 
     public function maskedPhoneNumber(): ?string
     {
-        $phone = $this->phone_number;
-
-        if (! $phone) {
-            return null;
-        }
-
-        if (strlen($phone) < 8) {
-            return str_repeat('*', strlen($phone));
-        }
-
-        return Str::mask($phone, '*', 4, strlen($phone) - 7);
+        return Masking::phone($this->phone_number);
     }
 
     public function maskedEmail(): ?string
     {
-        if (! $this->email || ! str_contains($this->email, '@')) {
-            return null;
-        }
-
-        [$local, $domain] = explode('@', $this->email, 2);
-
-        return Str::substr($local, 0, 1).str_repeat('*', max(strlen($local) - 1, 1)).'@'.$domain;
+        return Masking::email($this->email);
     }
 }
