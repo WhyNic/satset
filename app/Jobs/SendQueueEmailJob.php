@@ -5,6 +5,8 @@ namespace App\Jobs;
 use App\Mail\QueueEmail;
 use App\Models\QueueTicket;
 use App\Models\TicketEmailEvent;
+use App\Services\QueueEmailNotificationService;
+use App\Services\QueueService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -78,8 +80,17 @@ class SendQueueEmailJob implements ShouldQueue
         return match ($this->event) {
             TicketEmailEvent::JOINED, TicketEmailEvent::CANCELLED => true,
             TicketEmailEvent::CALLED => $ticket->status === QueueTicket::STATUS_CALLED,
-            TicketEmailEvent::THREE_AHEAD, TicketEmailEvent::ONE_AHEAD => $ticket->status === QueueTicket::STATUS_WAITING,
+            // The threshold is checked again at send time: an alert whose count has already moved on is dropped.
+            TicketEmailEvent::THREE_AHEAD => $ticket->status === QueueTicket::STATUS_WAITING
+                && in_array($this->peopleAheadNow($ticket), [2, 3], true),
+            TicketEmailEvent::ONE_AHEAD => $ticket->status === QueueTicket::STATUS_WAITING
+                && $this->peopleAheadNow($ticket) === 1,
         };
+    }
+
+    private function peopleAheadNow(QueueTicket $ticket): int
+    {
+        return QueueEmailNotificationService::peopleAhead($ticket, app(QueueService::class));
     }
 
     /**

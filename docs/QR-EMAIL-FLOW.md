@@ -20,8 +20,13 @@
 - Email alerts are queued jobs. Each `(ticket, event)` pair is claimed once, so an event
   is sent at most once. A failed send releases the claim and retries. A claim left unsent
   for more than 10 minutes by a crashed worker is reclaimed atomically.
-- Outdated alerts are settled without sending: "three ahead" and "one ahead" once the
-  customer is no longer waiting, and "called" once the customer is no longer called.
+- Threshold alerts are checked on every queue change and on every join:
+  - 2 or 3 people ahead: "tinggal N antrean lagi", sent once. N is the real count when the email is rendered.
+  - exactly 1 person ahead: "tinggal 1 antrean lagi", sent once.
+  - A customer who joins already inside that window gets the alert at once.
+  - Each alert is checked again at send time. If the count has moved outside its window,
+    it is settled without sending. A "called" alert is dropped if the customer is no longer called.
+  - A customer who is next (0 ahead) gets no threshold alert, only the "called" email.
 - `EMAIL_ALERTS_ENABLED=false` stops all sending without affecting the queue.
 - A total SMTP outage never blocks joining or any queue action.
 - Failed jobs are pruned daily, since their payload can hold an email address.

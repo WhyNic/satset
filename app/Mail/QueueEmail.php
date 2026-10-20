@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\QueueTicket;
 use App\Models\TicketEmailEvent;
+use App\Services\QueueEmailNotificationService;
 use App\Services\QueueService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -42,7 +43,7 @@ class QueueEmail extends Mailable
 
         return match ($this->event) {
             TicketEmailEvent::JOINED => "Antrean {$number} di {$name} sudah dibuat",
-            TicketEmailEvent::THREE_AHEAD => "Tinggal 3 antrean lagi, {$number}",
+            TicketEmailEvent::THREE_AHEAD => "Tinggal {$this->peopleAhead()} antrean lagi, {$number}",
             TicketEmailEvent::ONE_AHEAD => "Tinggal 1 antrean lagi, {$number}",
             TicketEmailEvent::CALLED => $this->ticket->restaurant->isPickup() ? "Pesanan {$number} siap diambil" : "Giliran {$number} sudah tiba",
             TicketEmailEvent::CANCELLED => "Antrean {$number} dibatalkan",
@@ -60,7 +61,7 @@ class QueueEmail extends Mailable
         return match ($this->event) {
             TicketEmailEvent::JOINED => $this->joinedLines($number, $name),
             TicketEmailEvent::THREE_AHEAD => [
-                "Tinggal 3 antrean lagi sebelum giliran {$number} di {$name}.",
+                "Tinggal {$this->peopleAhead()} antrean lagi sebelum giliran {$number} di {$name}.",
                 $this->ticket->restaurant->isPickup() ? "Silakan bersiap di {$name}." : "Silakan bersiap menuju {$name}.",
             ],
             TicketEmailEvent::ONE_AHEAD => [
@@ -74,6 +75,14 @@ class QueueEmail extends Mailable
                 "Antrean {$number} di {$name} telah dibatalkan.",
             ],
         };
+    }
+
+    /**
+     * The count as it stands when the email is rendered, so "tinggal N" never disagrees with the queue.
+     */
+    private function peopleAhead(): int
+    {
+        return QueueEmailNotificationService::peopleAhead($this->ticket, app(QueueService::class));
     }
 
     /**
