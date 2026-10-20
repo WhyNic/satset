@@ -5,7 +5,9 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminQueueController;
 use App\Http\Controllers\Admin\AdminQueueOverviewController;
 use App\Http\Controllers\Admin\AdminRestaurantController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Controllers\Admin\AdminWhatsAppLogController;
 use App\Http\Controllers\Admin\AdminQrController;
@@ -22,11 +24,11 @@ Route::get('/r/{restaurant:slug}/status', [RestaurantController::class, 'status'
 Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.verify');
 Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])->name('whatsapp.webhook');
 
+Route::post('/webhooks/twilio', [TwilioWebhookController::class, 'receive'])->name('whatsapp.twilio');
+Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status'])->name('whatsapp.twilio.status');
+
 Route::get('/restaurants/{restaurant}', fn (\App\Models\Restaurant $restaurant) => redirect()->route('outlets.show', $restaurant->slug))
     ->name('restaurants.show');
-
-Route::get('/restaurants/{restaurant}/recommendations', [RestaurantController::class, 'recommendations'])
-    ->name('restaurants.recommendations');
 
 Route::get('/restaurants/{restaurant}/queue/new', fn (\App\Models\Restaurant $restaurant) => redirect()->route('outlets.show', $restaurant->slug))
     ->name('queue.create');
@@ -48,39 +50,56 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         ->middleware('throttle:5,1')
         ->name('login.store');
 
-    Route::middleware('auth')->group(function (): void {
+    Route::middleware(['auth', 'admin.active'])->group(function (): void {
         Route::get('/', fn () => redirect()->route('admin.dashboard'))
             ->name('home');
 
         Route::post('/logout', [AdminAuthController::class, 'logout'])
             ->name('logout');
 
+        // Every admin. Lists are scoped to the outlets the account may manage.
         Route::get('/dashboard', AdminDashboardController::class)
             ->name('dashboard');
 
         Route::get('/queues', AdminQueueOverviewController::class)
             ->name('queues.index');
-        Route::get('/whatsapp-logs', AdminWhatsAppLogController::class)->name('whatsapp-logs.index');
         Route::get('/qr', [AdminQrController::class, 'index'])->name('qr.index');
-        Route::get('/restaurants/{restaurant}/qr', [AdminQrController::class, 'show'])->name('qr.show');
-        Route::get('/restaurants/{restaurant}/qr.svg', [AdminQrController::class, 'image'])->name('qr.image');
 
-        Route::resource('/restaurants', AdminRestaurantController::class)
-            ->except(['show']);
+        // Outlet-scoped: owners, or outlet admins assigned to {restaurant}.
+        Route::middleware('can:manage-restaurant,restaurant')->group(function (): void {
+            Route::get('/restaurants/{restaurant}/qr', [AdminQrController::class, 'show'])->name('qr.show');
+            Route::get('/restaurants/{restaurant}/qr.svg', [AdminQrController::class, 'image'])->name('qr.image');
 
-        Route::get('/restaurants/{restaurant}/queue', [AdminQueueController::class, 'show'])
-            ->name('restaurants.queue');
+            Route::get('/restaurants/{restaurant}/edit', [AdminRestaurantController::class, 'edit'])
+                ->name('restaurants.edit');
+            Route::put('/restaurants/{restaurant}', [AdminRestaurantController::class, 'update'])
+                ->name('restaurants.update');
 
-        Route::post('/restaurants/{restaurant}/queue/call-next', [AdminQueueController::class, 'callNext'])
-            ->name('restaurants.queue.call-next');
+            Route::get('/restaurants/{restaurant}/queue', [AdminQueueController::class, 'show'])
+                ->name('restaurants.queue');
 
-        Route::post('/restaurants/{restaurant}/queue/complete', [AdminQueueController::class, 'complete'])
-            ->name('restaurants.queue.complete');
+            Route::post('/restaurants/{restaurant}/queue/call-next', [AdminQueueController::class, 'callNext'])
+                ->name('restaurants.queue.call-next');
 
-        Route::post('/restaurants/{restaurant}/queue/skip', [AdminQueueController::class, 'skip'])
-            ->name('restaurants.queue.skip');
+            Route::post('/restaurants/{restaurant}/queue/complete', [AdminQueueController::class, 'complete'])
+                ->name('restaurants.queue.complete');
 
-        Route::post('/restaurants/{restaurant}/queue/{ticket}/cancel', [AdminQueueController::class, 'cancel'])
-            ->name('restaurants.queue.cancel');
+            Route::post('/restaurants/{restaurant}/queue/skip', [AdminQueueController::class, 'skip'])
+                ->name('restaurants.queue.skip');
+
+            Route::post('/restaurants/{restaurant}/queue/{ticket}/cancel', [AdminQueueController::class, 'cancel'])
+                ->name('restaurants.queue.cancel');
+        });
+
+        // SatSet owner only.
+        Route::middleware('can:owner')->group(function (): void {
+            Route::resource('/restaurants', AdminRestaurantController::class)
+                ->only(['index', 'create', 'store', 'destroy']);
+
+            Route::resource('/users', AdminUserController::class)
+                ->except(['show', 'destroy']);
+
+            Route::get('/whatsapp-logs', AdminWhatsAppLogController::class)->name('whatsapp-logs.index');
+        });
     });
 });

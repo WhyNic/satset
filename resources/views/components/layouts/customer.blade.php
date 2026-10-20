@@ -1,28 +1,34 @@
-@props(['title' => 'SatSet', 'showHeader' => true])
+@props(['title' => 'SatSet'])
 <!doctype html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#0b2118">
+    <meta name="theme-color" content="#2e6d6d">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title }}</title>
-    <link rel="icon" href="{{ asset('icons/icon-192.png') }}">
-    <link rel="stylesheet" href="{{ asset('css/satset.css') }}?v=qr-1">
-    <script src="{{ asset('js/customer.js') }}?v=qr-1" defer></script>
+    <link rel="icon" href="{{ asset('images/logo-128.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/satset.css') }}?v=ui-6">
+    <script src="{{ asset('js/customer.js') }}?v=ui-6" defer></script>
 </head>
 <body>
     <a class="skip-link" href="#main">Lewati navigasi</a>
     <header class="topbar">
-        <div class="nav-inner">
-            <a class="brand" href="{{ route('home') }}" aria-label="SatSet beranda"><span class="brand-mark">S</span>SatSet<span class="brand-caption">VIRTUAL QUEUE</span></a>
-            <nav aria-label="Navigasi utama"><a href="{{ route('home') }}#outlets">Temukan outlet <span aria-hidden="true">&nearr;</span></a></nav>
+        <div class="topbar-inner">
+            <a class="brand" href="{{ route('home') }}" aria-label="SatSet beranda"><img class="brand-mark" src="{{ asset('images/logo-128.png') }}" alt="" width="32" height="32">SatSet</a>
+            <span class="topbar-caption">Antre tanpa berdiri</span>
         </div>
     </header>
     <main id="main">
-        @if(session('status'))<div class="notice" role="status">{{ session('status') }}</div>@endif
+        @if(session('status'))<div class="flash" role="status">{{ session('status') }}</div>@endif
         {{ $slot }}
     </main>
-    <footer class="footer"><a class="brand" href="{{ route('home') }}">SatSet</a><span>Waktu Anda lebih berharga.</span><small>Virtual queue untuk restoran, cafe, dan tempat makan.</small></footer>
+    <footer class="footer">
+        <span><strong>SatSet</strong> &middot; Virtual queue untuk F&amp;B</span>
+        <span>Waktu Anda lebih berharga.</span>
+    </footer>
 </body>
 </html>

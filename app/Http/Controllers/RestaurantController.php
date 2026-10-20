@@ -29,14 +29,4 @@ class RestaurantController extends Controller
     {
         return response()->json($queueService->getRestaurantSnapshot($restaurant))->header('Cache-Control', 'no-store');
     }
-
-    public function recommendations(Restaurant $restaurant, QueueService $queueService)
-    {
-        abort_unless($restaurant->active, 404);
-
-        $snapshot = $queueService->getRestaurantSnapshot($restaurant);
-        $recommendations = $queueService->getRecommendations($restaurant);
-
-        return view('restaurants.recommendations', compact('restaurant', 'snapshot', 'recommendations'));
-    }
 }

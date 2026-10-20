@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\QueueTicket;
 use App\Models\Restaurant;
 use App\Models\WhatsappLog;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,17 +13,59 @@ use Throwable;
 
 class WhatsAppService
 {
+    public function provider(): string
+    {
+        return config('whatsapp.provider') === 'twilio' ? 'twilio' : 'meta';
+    }
+
     public function ready(): bool
     {
-        return config('whatsapp.enabled')
-            && filled(config('whatsapp.access_token'))
+        if (! config('whatsapp.enabled')) {
+            return false;
+        }
+
+        if ($this->provider() === 'twilio') {
+            return (bool) preg_match('/^AC[0-9a-f]{32}$/i', (string) config('whatsapp.twilio.account_sid'))
+                && filled(config('whatsapp.twilio.auth_token'))
+                && preg_match('/^[1-9]\d{7,14}$/', $this->publicNumber());
+        }
+
+        return filled(config('whatsapp.access_token'))
             && preg_match('/^\d+$/', (string) config('whatsapp.phone_number_id'))
             && preg_match('/^v\d+\.\d+$/', (string) config('whatsapp.api_version'));
     }
 
+    /**
+     * Apply a provider delivery receipt, only ever moving a message forward.
+     */
+    public function applyDeliveryStatus(string $providerMessageId, string $status): void
+    {
+        $allowedPrevious = match ($status) {
+            'delivered' => ['sent'],
+            'read' => ['sent', 'delivered'],
+            'failed' => ['sent'],
+            default => [],
+        };
+        if ($providerMessageId === '' || $allowedPrevious === []) {
+            return;
+        }
+
+        WhatsappLog::query()->where('direction', 'outbound')
+            ->where('provider_message_id', $providerMessageId)
+            ->whereIn('status', $allowedPrevious)->update([
+                'status' => $status,
+                'error_code' => $status === 'failed' ? 'provider_delivery_failed' : null,
+            ]);
+    }
+
+    private function publicNumber(): string
+    {
+        return app(QueueService::class)->normalizePhoneNumber((string) config('whatsapp.phone_number'));
+    }
+
     public function entryUrl(Restaurant $restaurant): ?string
     {
-        $phone = app(QueueService::class)->normalizePhoneNumber((string) config('whatsapp.phone_number'));
+        $phone = $this->publicNumber();
 
         if (! $this->ready() || ! preg_match('/^[1-9]\d{7,14}$/', $phone)) {
             return null;
@@ -98,18 +141,25 @@ class WhatsAppService
                 }
             }
 
-            $response = Http::withToken(config('whatsapp.access_token'))
-                ->acceptJson()->connectTimeout(3)->timeout(8)
-                ->post('https://graph.facebook.com/'.config('whatsapp.api_version').'/'.config('whatsapp.phone_number_id').'/messages', [
-                    'messaging_product' => 'whatsapp',
-                    'recipient_type' => 'individual',
-                    'to' => $message->phone_number,
-                    ...$payload,
-                ]);
+            if ($this->provider() === 'twilio') {
+                $response = $this->postToTwilio($message->phone_number, $payload);
+                $providerId = $response->json('sid');
+            } else {
+                $response = Http::withToken(config('whatsapp.access_token'))
+                    ->acceptJson()->connectTimeout(3)->timeout(8)
+                    ->post('https://graph.facebook.com/'.config('whatsapp.api_version').'/'.config('whatsapp.phone_number_id').'/messages', [
+                        'messaging_product' => 'whatsapp',
+                        'recipient_type' => 'individual',
+                        'to' => $message->phone_number,
+                        ...$payload,
+                    ]);
+                $providerId = $response->json('messages.0.id');
+            }
 
-            $providerId = $response->json('messages.0.id');
             if (! $response->successful() || ! is_string($providerId) || $providerId === '') {
-                return $this->failed($message, 'http_'.$response->status());
+                $providerCode = $this->provider() === 'twilio' ? $response->json('code') : null;
+
+                return $this->failed($message, 'http_'.$response->status().(is_int($providerCode) ? '_'.$providerCode : ''));
             }
 
             DB::transaction(function () use ($message, $providerId): void {
@@ -126,6 +176,37 @@ class WhatsAppService
         } catch (Throwable) {
             return $this->failed($message, 'transport_or_delivery_error');
         }
+    }
+
+    /**
+     * Messages are stored in Meta's payload shape; translate them for Twilio at send time.
+     */
+    private function postToTwilio(string $to, array $payload): Response
+    {
+        $sid = (string) config('whatsapp.twilio.account_sid');
+        $params = [
+            'From' => 'whatsapp:+'.$this->publicNumber(),
+            'To' => 'whatsapp:+'.$to,
+        ];
+
+        if (($payload['type'] ?? null) === 'template') {
+            $params['ContentSid'] = $payload['template']['name'];
+            $params['ContentVariables'] = json_encode(collect($payload['template']['components'][0]['parameters'] ?? [])
+                ->values()->mapWithKeys(fn (array $parameter, int $index): array => [(string) ($index + 1) => $parameter['text']])
+                ->all(), JSON_THROW_ON_ERROR);
+        } else {
+            $params['Body'] = $payload['text']['body'] ?? '';
+        }
+
+        // Twilio can only report delivery to a publicly reachable HTTPS address.
+        $appUrl = rtrim((string) config('app.url'), '/');
+        if (str_starts_with($appUrl, 'https://')) {
+            $params['StatusCallback'] = $appUrl.route('whatsapp.twilio.status', [], false);
+        }
+
+        return Http::withBasicAuth($sid, (string) config('whatsapp.twilio.auth_token'))
+            ->asForm()->acceptJson()->connectTimeout(3)->timeout(8)
+            ->post('https://api.twilio.com/2010-04-01/Accounts/'.$sid.'/Messages.json', $params);
     }
 
     private function failed(WhatsappLog $message, string $code): bool

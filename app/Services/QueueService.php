@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\QueueTicket;
 use App\Models\Restaurant;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -178,22 +177,6 @@ class QueueService
         }
 
         return $ticket;
-    }
-
-    public function getRecommendations(Restaurant $selected): Collection
-    {
-        return Restaurant::query()
-            ->where('active', true)
-            ->whereKeyNot($selected->id)
-            ->where('category', $selected->category)
-            ->get()
-            ->map(function (Restaurant $restaurant): Restaurant {
-                $restaurant->setAttribute('queue_snapshot', $this->getRestaurantSnapshot($restaurant));
-
-                return $restaurant;
-            })
-            ->sortBy(fn (Restaurant $restaurant): int => $restaurant->getAttribute('queue_snapshot')['estimated_wait'])
-            ->values();
     }
 
     public function normalizePhoneNumber(string $phone): string

@@ -65,6 +65,26 @@ class WhatsAppFlowTest extends TestCase
         Http::assertSent(fn ($request) => $request['type'] === 'text' && str_contains($request['text']['body'], 'Berhasil!') && str_contains($request['text']['body'], 'A-001'));
     }
 
+    public function test_ticket_link_uses_public_app_url_not_webhook_host(): void
+    {
+        $this->fakeApi();
+        config(['app.url' => 'https://queue.example.test']);
+        $this->restaurant();
+        $this->incoming('one', 'ANTRE ayam-bakar');
+        $this->incoming('two', '2');
+        $this->incoming('three', 'YA');
+        $ticket = QueueTicket::query()->firstOrFail();
+        $this->assertDatabaseHas('whatsapp_logs', [
+            'direction' => 'outbound',
+            'queue_ticket_id' => $ticket->id,
+            'event_key' => 'reply:three',
+        ]);
+        $this->assertStringContainsString(
+            'https://queue.example.test/queue/'.$ticket->public_token,
+            WhatsappLog::query()->where('event_key', 'reply:three')->value('message'),
+        );
+    }
+
     #[TestWith(['0'])]
     #[TestWith(['7'])]
     #[TestWith(['-1'])]

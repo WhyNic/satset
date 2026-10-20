@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,13 +21,25 @@ class AdminAuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            return back()->withErrors(['email' => 'Email atau password tidak sesuai.'])->onlyInput('email');
+        if (! Auth::attempt([...$credentials, 'active' => true], $request->boolean('remember'))) {
+            return back()->withErrors(['email' => 'Email atau password tidak sesuai, atau akun sudah dinonaktifkan.'])->onlyInput('email');
         }
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('admin.dashboard'));
+        return redirect()->intended($this->homeFor($request->user()));
+    }
+
+    /**
+     * A cashier with a single outlet lands directly on that outlet's queue.
+     */
+    private function homeFor(User $user): string
+    {
+        if (! $user->isOwner() && $user->restaurants()->count() === 1) {
+            return route('admin.restaurants.queue', $user->restaurants()->first());
+        }
+
+        return route('admin.dashboard');
     }
 
     public function logout(Request $request)
