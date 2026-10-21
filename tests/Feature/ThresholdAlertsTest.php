@@ -239,7 +239,7 @@ class ThresholdAlertsTest extends TestCase
     private function queueWaiting(Restaurant $restaurant, int $count): void
     {
         for ($i = 1; $i <= $count; $i++) {
-            app(QueueService::class)->createTicket($restaurant, email: "antre{$i}@contoh.test");
+            app(QueueService::class)->createTicket($restaurant, email: "antre{$i}@contoh.test", emailVerified: true);
         }
     }
 
@@ -248,7 +248,7 @@ class ThresholdAlertsTest extends TestCase
      */
     private function join(Restaurant $restaurant, string $email): QueueTicket
     {
-        $ticket = app(QueueService::class)->createTicket($restaurant, email: $email);
+        $ticket = app(QueueService::class)->createTicket($restaurant, email: $email, emailVerified: true);
         app(QueueEmailNotificationService::class)->joined($ticket);
 
         return $ticket;
@@ -309,7 +309,7 @@ class ThresholdAlertsTest extends TestCase
     private function randomJoin(Restaurant $restaurant, QueueService $queue, QueueEmailNotificationService $notifications, array &$joined, int &$counter): void
     {
         $email = 'tamu'.(++$counter).'@chaos.test';
-        $ticket = $queue->createTicket($restaurant, partySize: mt_rand(1, 6), email: $email);
+        $ticket = $queue->createTicket($restaurant, partySize: mt_rand(1, 6), email: $email, emailVerified: true);
         $notifications->joined($ticket);
         $joined[$ticket->id] = $email;
     }

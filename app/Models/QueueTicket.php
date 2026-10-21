@@ -19,12 +19,16 @@ class QueueTicket extends Model
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_SKIPPED = 'skipped';
 
+    /** Verification hash never leaves the server. */
+    protected $hidden = ['email_verification_hash'];
+
     protected $fillable = [
         'public_token',
         'restaurant_id',
         'customer_name',
         'phone_number',
         'email',
+        'email_verified_at',
         'party_size',
         'queue_number',
         'sequence_number',
@@ -51,6 +55,7 @@ class QueueTicket extends Model
         return [
             'sequence_number' => 'integer',
             'party_size' => 'integer',
+            'email_verified_at' => 'datetime',
             'joined_at' => 'datetime',
             'called_at' => 'datetime',
             'completed_at' => 'datetime',
@@ -78,6 +83,14 @@ class QueueTicket extends Model
     public function deliveredEmailCount(): int
     {
         return $this->emailEvents->whereNotNull('sent_at')->count();
+    }
+
+    /**
+     * Alerts are only sent to an email whose owner has clicked the verification link.
+     */
+    public function isEmailVerified(): bool
+    {
+        return $this->email_verified_at !== null;
     }
 
     public function isActive(): bool

@@ -104,6 +104,10 @@ Admin, setelah login di `/admin/login`:
 
 ## Privasi
 
+- Customer harus mencentang persetujuan sebelum mendaftar. Halaman `/privasi` menjelaskan data apa yang disimpan dan untuk apa. Teks itu draf dan perlu ditinjau sebelum dipakai publik.
+- Email baru menerima pemberitahuan setelah pemiliknya mengklik tautan verifikasi di email konfirmasi. Tautan hanya menyimpan hash, bukan token aslinya.
+- Customer bisa minta tautan verifikasi baru dari halaman tiketnya. Staf bisa mengirim ulang email status dari halaman antrean.
+- Setiap aksi staf (panggil, selesai, lewati, batal, kirim ulang, ubah pengaturan outlet) tercatat dengan nama pelakunya di "Jejak aktivitas".
 - Email dan nomor telepon dihapus dari tiket saat tiket selesai, dilewati, atau dibatalkan.
 - Di admin, kontak tampil disamarkan, misalnya `t***@contoh.com`.
 - Failed jobs dibersihkan setiap hari, karena payload-nya bisa memuat email.

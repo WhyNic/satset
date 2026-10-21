@@ -23,6 +23,6 @@
         @if(session('status'))<div class="notice" role="status">{{ session('status') }}</div>@endif
         {{ $slot }}
     </main>
-    <footer class="footer"><a class="brand" href="{{ route('home') }}">SatSet</a><span>Waktu Anda lebih berharga.</span><small>Virtual queue untuk restoran, cafe, dan tempat makan.</small></footer>
+    <footer class="footer"><a class="brand" href="{{ route('home') }}">SatSet</a><span>Waktu Anda lebih berharga.</span><small>Virtual queue untuk restoran, cafe, dan tempat makan.</small><a class="text-link" href="{{ route('privacy') }}">Kebijakan privasi</a></footer>
 </body>
 </html>

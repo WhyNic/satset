@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Restaurant;
+use App\Models\StaffAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -37,6 +38,11 @@ class AdminRestaurantController extends Controller
     public function update(Request $request, Restaurant $restaurant)
     {
         $restaurant->update($this->validated($request, $restaurant));
+        StaffAction::query()->create([
+            'user_id' => auth()->id(),
+            'restaurant_id' => $restaurant->id,
+            'action' => 'restaurant-update',
+        ]);
 
         return redirect()->route('admin.restaurants.index')->with('status', 'Restoran berhasil diperbarui.');
     }

@@ -84,9 +84,13 @@ class QueueService
             ->first();
     }
 
-    public function createTicket(Restaurant $restaurant, ?string $name = null, ?string $phone = null, int $partySize = 1, ?string $email = null): QueueTicket
+    /**
+     * A new email is unverified until its owner clicks the link. $emailVerified is only for callers that
+     * already know the address is confirmed (tests, and any future trusted import).
+     */
+    public function createTicket(Restaurant $restaurant, ?string $name = null, ?string $phone = null, int $partySize = 1, ?string $email = null, bool $emailVerified = false): QueueTicket
     {
-        return DB::transaction(function () use ($restaurant, $name, $phone, $partySize, $email): QueueTicket {
+        return DB::transaction(function () use ($restaurant, $name, $phone, $partySize, $email, $emailVerified): QueueTicket {
             $restaurant = Restaurant::query()->lockForUpdate()->findOrFail($restaurant->id);
             if (! $restaurant->active || ! $restaurant->queue_open) {
                 throw ValidationException::withMessages(['restaurant' => 'Antrean outlet sedang ditutup.']);
@@ -108,6 +112,7 @@ class QueueService
                 'customer_name' => $name ?: null,
                 'phone_number' => $phone ? $this->normalizePhoneNumber($phone) : null,
                 'email' => $email,
+                'email_verified_at' => $email && $emailVerified ? now() : null,
                 'party_size' => $partySize,
                 'queue_number' => $number['queue_number'],
                 'sequence_number' => $number['sequence_number'],
@@ -179,7 +184,7 @@ class QueueService
         if ($changed) {
             $this->afterChange($ticket->restaurant, $ticket, 'cancelled');
             // Cleared only after the cancellation notices have been queued, which still need the contact details.
-            $ticket->update(['phone_number' => null, 'email' => null]);
+            $ticket->update(['phone_number' => null, 'email' => null, 'email_verification_hash' => null]);
         }
 
         return $ticket;
@@ -241,6 +246,7 @@ class QueueService
                 $timestampColumn => now(),
                 'phone_number' => null,
                 'email' => null,
+                'email_verification_hash' => null,
             ]);
 
             return $ticket->fresh('restaurant');

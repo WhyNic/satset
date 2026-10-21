@@ -66,7 +66,7 @@
                         <tr>
                             <td><strong>{{ $ticket->queue_number }}</strong></td>
                             <td>{{ $restaurant->isPickup() ? '1 pesanan' : $ticket->party_size.' orang' }}</td>
-                            <td>{{ $ticket->maskedPhoneNumber() ?? $ticket->maskedEmail() ?? 'Tidak tersedia' }}@if($ticket->maskedEmail())<br><small>Email terkirim: {{ $ticket->deliveredEmailCount() }}</small>@endif</td>
+                            <td>{{ $ticket->maskedPhoneNumber() ?? $ticket->maskedEmail() ?? 'Tidak tersedia' }}@if($ticket->maskedEmail())<br><small>Email {{ $ticket->isEmailVerified() ? 'terverifikasi' : 'belum diverifikasi' }}, terkirim {{ $ticket->deliveredEmailCount() }}</small>@endif</td>
                             <td>{{ $ticket->joined_at?->format('H:i') ?? '-' }}</td>
                             <td><span class="admin-status admin-status-{{ $ticket->status }}">{{ ucfirst($ticket->status) }}</span></td>
                             <td class="admin-inline-actions">
@@ -88,6 +88,12 @@
                                         </form>
                                     @endif
                                 @endif
+                                @if ($ticket->maskedEmail())
+                                    <form method="post" action="{{ route('admin.restaurants.queue.resend-email', [$restaurant, $ticket]) }}">
+                                        @csrf
+                                        <button class="admin-table-action" type="submit">Kirim ulang email</button>
+                                    </form>
+                                @endif
                                     <form method="post" action="{{ route('admin.restaurants.queue.cancel', [$restaurant, $ticket]) }}" onsubmit="return confirm('Batalkan antrean ini?')">
                                         @csrf
                                         <button class="admin-danger-link" type="submit">Batalkan</button>
@@ -96,6 +102,33 @@
                         </tr>
                     @empty
                         <tr><td colspan="6">Belum ada antrean aktif.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <section class="admin-panel">
+        <div class="admin-panel-header">
+            <div>
+                <h2>Jejak aktivitas</h2>
+                <p>Siapa melakukan apa di antrean ini, dan kapan.</p>
+            </div>
+        </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr><th>Waktu</th><th>Staf</th><th>Aksi</th><th>Nomor</th></tr>
+                </thead>
+                <tbody>
+                    @forelse ($activity as $entry)
+                        <tr>
+                            <td>{{ $entry->created_at?->format('d M H:i:s') }}</td>
+                            <td>{{ $entry->user?->name ?? 'Akun dihapus' }}</td>
+                            <td>{{ $entry->label() }}</td>
+                            <td>{{ $entry->queueTicket?->queue_number ?? '-' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4">Belum ada aktivitas.</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -17,6 +17,12 @@
                             @foreach ($lines as $line)
                                 <p style="margin:0 0 10px;font-size:15px;line-height:1.5;">{{ $line }}</p>
                             @endforeach
+                            @if ($verifyUrl)
+                                <p style="margin:20px 0 0;font-size:15px;line-height:1.5;">Klik tombol di bawah untuk memastikan email ini milik Anda. Pemberitahuan antrean baru dikirim setelah itu.</p>
+                                <p style="margin:12px 0 0;">
+                                    <a href="{{ $verifyUrl }}" style="display:inline-block;background:#1f2937;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold;">Verifikasi email saya</a>
+                                </p>
+                            @endif
                             <p style="margin:24px 0 0;">
                                 <a href="{{ $url }}" style="display:inline-block;background:#15803d;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold;">Lihat antrean Anda</a>
                             </p>

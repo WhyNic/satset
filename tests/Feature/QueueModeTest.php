@@ -54,7 +54,7 @@ class QueueModeTest extends TestCase
     {
         $restaurant = $this->restaurant(['queue_mode' => Restaurant::MODE_PICKUP]);
 
-        $this->post(route('outlets.join.store', $restaurant->slug), ['email' => 'tamu@contoh.test'])
+        $this->post(route('outlets.join.store', $restaurant->slug), ['consent' => 1, 'email' => 'tamu@contoh.test'])
             ->assertSessionHasNoErrors();
 
         $ticket = \App\Models\QueueTicket::query()->sole();
@@ -67,7 +67,7 @@ class QueueModeTest extends TestCase
     {
         $restaurant = $this->restaurant();
 
-        $this->post(route('outlets.join.store', $restaurant->slug), ['email' => 'tamu@contoh.test'])
+        $this->post(route('outlets.join.store', $restaurant->slug), ['consent' => 1, 'email' => 'tamu@contoh.test'])
             ->assertSessionHasErrors('party_size');
 
         $this->assertDatabaseCount('queue_tickets', 0);
@@ -77,7 +77,7 @@ class QueueModeTest extends TestCase
     {
         $restaurant = $this->restaurant(['queue_mode' => Restaurant::MODE_PICKUP]);
         $queue = app(QueueService::class);
-        $ticket = $queue->createTicket($restaurant, email: 'tamu@contoh.test');
+        $ticket = $queue->createTicket($restaurant, email: 'tamu@contoh.test', emailVerified: true);
 
         $queue->callNext($restaurant);
 
@@ -123,7 +123,7 @@ class QueueModeTest extends TestCase
     public function test_mode_cannot_change_while_the_outlet_has_active_tickets(): void
     {
         $restaurant = $this->restaurant();
-        app(QueueService::class)->createTicket($restaurant, partySize: 2, email: 'tamu@contoh.test');
+        app(QueueService::class)->createTicket($restaurant, partySize: 2, email: 'tamu@contoh.test', emailVerified: true);
 
         $this->actingAs(User::factory()->create())
             ->put(route('admin.restaurants.update', $restaurant), $this->payload(['queue_mode' => 'pickup']))
@@ -136,24 +136,24 @@ class QueueModeTest extends TestCase
     {
         $admin = User::factory()->create();
         $pickup = $this->restaurant(['queue_mode' => Restaurant::MODE_PICKUP]);
-        $this->post(route('outlets.join.store', $pickup->slug), ['email' => 'tamu@contoh.test']);
+        $this->post(route('outlets.join.store', $pickup->slug), ['consent' => 1, 'email' => 'tamu@contoh.test']);
 
         $this->actingAs($admin)->get(route('admin.restaurants.index'))->assertSee('Ambil di counter');
 
         $this->actingAs($admin)->get(route('admin.restaurants.queue', $pickup))
             ->assertSee('Pesanan')
             ->assertSee('1 pesanan')
-            ->assertSee('Email terkirim: 1');
+            ->assertSee('terkirim 1');
 
         $this->actingAs($admin)->get(route('admin.queues.index'))
-            ->assertSee('Email terkirim: 1');
+            ->assertSee('terkirim 1');
     }
 
     public function test_customer_and_admin_see_the_same_outcome_for_a_called_ticket(): void
     {
         $restaurant = $this->restaurant();
         $queue = app(QueueService::class);
-        $ticket = $queue->createTicket($restaurant, partySize: 2, email: 'tamu@contoh.test');
+        $ticket = $queue->createTicket($restaurant, partySize: 2, email: 'tamu@contoh.test', emailVerified: true);
 
         $this->actingAs(User::factory()->create())
             ->post(route('admin.restaurants.queue.call-next', $restaurant))
@@ -163,7 +163,7 @@ class QueueModeTest extends TestCase
             ->assertSee('Giliran Anda sudah tiba');
         $this->actingAs(User::factory()->create())
             ->get(route('admin.restaurants.queue', $restaurant))
-            ->assertSee('Email terkirim: 1');
+            ->assertSee('terkirim 1');
         Mail::assertSent(QueueEmail::class, fn (QueueEmail $mail) => $mail->event === TicketEmailEvent::CALLED);
     }
 

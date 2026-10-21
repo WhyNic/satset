@@ -24,7 +24,10 @@ class EmailJoinController extends Controller
         abort_unless($restaurant->active, 404);
 
         // Pickup outlets have no seats, so there is no party to count: one order, one number.
-        $rules = ['email' => ['required', 'string', 'email:rfc', 'max:254']];
+        $rules = [
+            'email' => ['required', 'string', 'email:rfc', 'max:254'],
+            'consent' => ['accepted'],
+        ];
         if (! $restaurant->isPickup()) {
             $rules['party_size'] = ['required', 'integer', 'min:1', 'max:'.$restaurant->max_party_size];
         }

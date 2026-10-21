@@ -54,6 +54,7 @@ class EmailAlertsTest extends TestCase
 
         $this->post(route('outlets.join.store', $restaurant->slug), [
             'party_size' => 3,
+            'consent' => 1,
             'email' => 'tamu@contoh.test',
         ])->assertRedirect()->assertSessionHas('status');
 
@@ -91,6 +92,7 @@ class EmailAlertsTest extends TestCase
 
         $this->post(route('outlets.join.store', $restaurant->slug), [
             'party_size' => 2,
+            'consent' => 1,
             'email' => 'tamu@contoh.test',
         ])->assertSessionHasErrors('restaurant');
 
@@ -103,11 +105,11 @@ class EmailAlertsTest extends TestCase
         $restaurant = $this->restaurant();
 
         foreach (['Tamu@Contoh.test ', 'tamu@contoh.test', ' TAMU@contoh.test'] as $email) {
-            $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 1, 'email' => $email])
+            $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 1, 'consent' => 1, 'email' => $email])
                 ->assertSessionDoesntHaveErrors();
         }
 
-        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 1, 'email' => 'tamu@contoh.test'])
+        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 1, 'consent' => 1, 'email' => 'tamu@contoh.test'])
             ->assertSessionHasErrors('email');
 
         $this->assertSame(3, QueueTicket::query()->where('email', 'tamu@contoh.test')->count());
@@ -121,14 +123,14 @@ class EmailAlertsTest extends TestCase
         $other = $this->restaurant(['name' => 'Rice Bowl', 'slug' => 'rice-bowl', 'prefix' => 'C']);
 
         for ($i = 0; $i < 3; $i++) {
-            $queue->createTicket($restaurant, email: 'tamu@contoh.test');
+            $queue->createTicket($restaurant, email: 'tamu@contoh.test', emailVerified: true);
         }
-        $queue->createTicket($other, email: 'tamu@contoh.test');
+        $queue->createTicket($other, email: 'tamu@contoh.test', emailVerified: true);
 
         $queue->callNext($restaurant);
         $queue->completeCurrent($restaurant);
 
-        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 1, 'email' => 'tamu@contoh.test'])
+        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 1, 'consent' => 1, 'email' => 'tamu@contoh.test'])
             ->assertSessionDoesntHaveErrors();
         $this->assertSame(3, QueueTicket::query()->where('restaurant_id', $restaurant->id)->whereIn('status', self::ACTIVE)->where('email', 'tamu@contoh.test')->count());
     }
@@ -139,10 +141,10 @@ class EmailAlertsTest extends TestCase
 
         // Festival venues often share one public IP, so the limit must allow a crowd through.
         for ($i = 0; $i < 30; $i++) {
-            $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 0, 'email' => 'x'])->assertStatus(302);
+            $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 0, 'consent' => 1, 'email' => 'x'])->assertStatus(302);
         }
 
-        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 0, 'email' => 'x'])->assertStatus(429);
+        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 0, 'consent' => 1, 'email' => 'x'])->assertStatus(429);
     }
 
     // ----- Event delivery -----------------------------------------------------------------
@@ -154,7 +156,7 @@ class EmailAlertsTest extends TestCase
         $restaurant = $this->restaurant();
         $tickets = [];
         foreach (['a', 'b', 'c', 'd', 'e', 'f'] as $name) {
-            $tickets[$name] = $queue->createTicket($restaurant, email: "{$name}@contoh.test");
+            $tickets[$name] = $queue->createTicket($restaurant, email: "{$name}@contoh.test", emailVerified: true);
         }
 
         $queue->callNext($restaurant);   // A called; B one ahead; D three ahead
@@ -175,7 +177,7 @@ class EmailAlertsTest extends TestCase
         Mail::fake();
         $queue = app(QueueService::class);
         $restaurant = $this->restaurant();
-        $ticket = $queue->createTicket($restaurant, email: 'tamu@contoh.test');
+        $ticket = $queue->createTicket($restaurant, email: 'tamu@contoh.test', emailVerified: true);
 
         $queue->cancelTicket($ticket);
 
@@ -188,9 +190,9 @@ class EmailAlertsTest extends TestCase
         Mail::fake();
         $queue = app(QueueService::class);
         $restaurant = $this->restaurant();
-        $first = $queue->createTicket($restaurant, email: 'satu@contoh.test');
-        $second = $queue->createTicket($restaurant, email: 'dua@contoh.test');
-        $third = $queue->createTicket($restaurant, email: 'tiga@contoh.test');
+        $first = $queue->createTicket($restaurant, email: 'satu@contoh.test', emailVerified: true);
+        $second = $queue->createTicket($restaurant, email: 'dua@contoh.test', emailVerified: true);
+        $third = $queue->createTicket($restaurant, email: 'tiga@contoh.test', emailVerified: true);
 
         $queue->callNext($restaurant);
         $queue->completeCurrent($restaurant);
@@ -209,8 +211,8 @@ class EmailAlertsTest extends TestCase
         Log::spy();
         $queue = app(QueueService::class);
         $restaurant = $this->restaurant();
-        $queue->createTicket($restaurant, email: 'a@contoh.test');
-        $queue->createTicket($restaurant, email: 'b@contoh.test');
+        $queue->createTicket($restaurant, email: 'a@contoh.test', emailVerified: true);
+        $queue->createTicket($restaurant, email: 'b@contoh.test', emailVerified: true);
 
         Mail::shouldReceive('to')->andThrow(new RuntimeException('SMTP unreachable'));
 
@@ -226,7 +228,7 @@ class EmailAlertsTest extends TestCase
     {
         $queue = app(QueueService::class);
         $restaurant = $this->restaurant();
-        $ticket = $queue->createTicket($restaurant, email: 'tamu@contoh.test');
+        $ticket = $queue->createTicket($restaurant, email: 'tamu@contoh.test', emailVerified: true);
 
         // Real transport failure: nothing listens on port 1, so the SMTP connection is refused.
         config([
@@ -252,7 +254,7 @@ class EmailAlertsTest extends TestCase
     {
         Mail::fake();
         $queue = app(QueueService::class);
-        $ticket = $queue->createTicket($this->restaurant(), email: 'tamu@contoh.test');
+        $ticket = $queue->createTicket($this->restaurant(), email: 'tamu@contoh.test', emailVerified: true);
 
         for ($i = 0; $i < 3; $i++) {
             (new SendQueueEmailJob($ticket->id, TicketEmailEvent::JOINED, 'tamu@contoh.test'))->handle();
@@ -268,7 +270,7 @@ class EmailAlertsTest extends TestCase
         $queue = app(QueueService::class);
         $restaurant = $this->restaurant();
 
-        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 2, 'email' => 'tamu@contoh.test'])
+        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 2, 'consent' => 1, 'email' => 'tamu@contoh.test'])
             ->assertSessionDoesntHaveErrors();
         $queue->callNext($restaurant);
 
@@ -279,7 +281,7 @@ class EmailAlertsTest extends TestCase
     public function test_a_stale_claim_from_a_crashed_worker_is_reclaimed(): void
     {
         Mail::fake();
-        $ticket = app(QueueService::class)->createTicket($this->restaurant(), email: 'tamu@contoh.test');
+        $ticket = app(QueueService::class)->createTicket($this->restaurant(), email: 'tamu@contoh.test', emailVerified: true);
         TicketEmailEvent::query()->create(['queue_ticket_id' => $ticket->id, 'event' => TicketEmailEvent::JOINED]);
         DB::table('ticket_email_events')->update(['created_at' => now()->subHour()]);
 
@@ -291,7 +293,7 @@ class EmailAlertsTest extends TestCase
     public function test_a_fresh_in_flight_claim_blocks_a_second_send(): void
     {
         Mail::fake();
-        $ticket = app(QueueService::class)->createTicket($this->restaurant(), email: 'tamu@contoh.test');
+        $ticket = app(QueueService::class)->createTicket($this->restaurant(), email: 'tamu@contoh.test', emailVerified: true);
         TicketEmailEvent::query()->create(['queue_ticket_id' => $ticket->id, 'event' => TicketEmailEvent::JOINED]);
 
         (new SendQueueEmailJob($ticket->id, TicketEmailEvent::JOINED, 'tamu@contoh.test'))->handle();
@@ -305,7 +307,7 @@ class EmailAlertsTest extends TestCase
     {
         Mail::fake();
         $restaurant = $this->restaurant();
-        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 2, 'email' => 'rahasia.tamu@contoh.test']);
+        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 2, 'consent' => 1, 'email' => 'rahasia.tamu@contoh.test']);
         $ticket = QueueTicket::query()->sole();
 
         $this->get(route('outlets.show', $restaurant->slug))->assertDontSee('rahasia.tamu@contoh.test');
@@ -321,7 +323,7 @@ class EmailAlertsTest extends TestCase
     public function test_every_email_template_renders_html_and_text_with_the_ticket_link(): void
     {
         $queue = app(QueueService::class);
-        $ticket = $queue->createTicket($this->restaurant(), partySize: 2, email: 'tamu@contoh.test');
+        $ticket = $queue->createTicket($this->restaurant(), partySize: 2, email: 'tamu@contoh.test', emailVerified: true);
 
         foreach ([TicketEmailEvent::JOINED, TicketEmailEvent::THREE_AHEAD, TicketEmailEvent::ONE_AHEAD, TicketEmailEvent::CALLED, TicketEmailEvent::CANCELLED] as $event) {
             $content = (new QueueEmail($ticket->fresh('restaurant'), $event))->content();
@@ -340,8 +342,8 @@ class EmailAlertsTest extends TestCase
         Mail::fake();
         $queue = app(QueueService::class);
         $restaurant = $this->restaurant();
-        $first = $queue->createTicket($restaurant, email: 'pertama@contoh.test');
-        $second = $queue->createTicket($restaurant, email: 'kedua@contoh.test');
+        $first = $queue->createTicket($restaurant, email: 'pertama@contoh.test', emailVerified: true);
+        $second = $queue->createTicket($restaurant, email: 'kedua@contoh.test', emailVerified: true);
         $queue->callNext($restaurant); // $first is now called and $second is still waiting.
         Mail::fake(); // Only the outdated jobs below may be observed.
 
@@ -380,7 +382,7 @@ class EmailAlertsTest extends TestCase
         for ($step = 0; $step < 300; $step++) {
             try {
                 match (mt_rand(0, 9)) {
-                    0, 1, 2, 3, 4 => $queue->createTicket($restaurant, partySize: mt_rand(1, 6), email: $addresses[mt_rand(0, 4)]),
+                    0, 1, 2, 3, 4 => $queue->createTicket($restaurant, partySize: mt_rand(1, 6), email: $addresses[mt_rand(0, 4)], emailVerified: true),
                     5 => $queue->callNext($restaurant),
                     6 => $queue->completeCurrent($restaurant),
                     7 => $queue->skipCurrent($restaurant),

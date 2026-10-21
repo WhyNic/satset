@@ -44,7 +44,7 @@ class EmailFlowChaosTest extends TestCase
 
         for ($i = 1; $i <= 6; $i++) {
             $addresses[] = "tamu{$i}@contoh.test";
-            $notifications->joined($queue->createTicket($restaurant, email: "tamu{$i}@contoh.test"));
+            $notifications->joined($queue->createTicket($restaurant, email: "tamu{$i}@contoh.test", emailVerified: true));
         }
 
         mt_srand(777);
@@ -89,7 +89,7 @@ class EmailFlowChaosTest extends TestCase
         $this->useMailer('down', 100);
         $restaurant = $this->restaurant();
 
-        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 2, 'email' => 'tamu@contoh.test'])
+        $this->post(route('outlets.join.store', $restaurant->slug), ['party_size' => 2, 'consent' => 1, 'email' => 'tamu@contoh.test'])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
@@ -102,7 +102,7 @@ class EmailFlowChaosTest extends TestCase
     public function test_customer_cancel_over_http_sends_one_notice_and_clears_the_email(): void
     {
         Mail::fake();
-        $ticket = app(QueueService::class)->createTicket($this->restaurant(), email: 'tamu@contoh.test');
+        $ticket = app(QueueService::class)->createTicket($this->restaurant(), email: 'tamu@contoh.test', emailVerified: true);
 
         $this->post(route('queue.cancel', $ticket->public_token))->assertRedirect();
 
@@ -115,7 +115,7 @@ class EmailFlowChaosTest extends TestCase
     {
         Mail::fake();
         $restaurant = $this->restaurant();
-        app(QueueService::class)->createTicket($restaurant, email: 'tamu@contoh.test');
+        app(QueueService::class)->createTicket($restaurant, email: 'tamu@contoh.test', emailVerified: true);
 
         $this->actingAs(User::factory()->create())
             ->post(route('admin.restaurants.queue.call-next', $restaurant))
@@ -129,8 +129,8 @@ class EmailFlowChaosTest extends TestCase
         Mail::fake();
         $restaurant = $this->restaurant();
         $queue = app(QueueService::class);
-        $first = $queue->createTicket($restaurant, email: 'satu@contoh.test');
-        $second = $queue->createTicket($restaurant, email: 'dua@contoh.test');
+        $first = $queue->createTicket($restaurant, email: 'satu@contoh.test', emailVerified: true);
+        $second = $queue->createTicket($restaurant, email: 'dua@contoh.test', emailVerified: true);
         $admin = User::factory()->create();
 
         $this->actingAs($admin)->post(route('admin.restaurants.queue.call-next', $restaurant));
@@ -170,7 +170,7 @@ class EmailFlowChaosTest extends TestCase
     public function test_ticket_page_names_the_channel_the_customer_will_actually_receive_updates_on(): void
     {
         $queue = app(QueueService::class);
-        $withEmail = $queue->createTicket($this->restaurant(), email: 'tamu@contoh.test');
+        $withEmail = $queue->createTicket($this->restaurant(), email: 'tamu@contoh.test', emailVerified: true);
         $withoutEmail = $queue->createTicket($this->restaurant(['slug' => 'lain', 'prefix' => 'B']));
 
         $this->get(route('queue.show', $withEmail->public_token))

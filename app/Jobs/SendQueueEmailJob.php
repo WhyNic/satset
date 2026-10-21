@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -56,7 +57,12 @@ class SendQueueEmailJob implements ShouldQueue
                 return;
             }
 
-            Mail::to($this->email)->send(new QueueEmail($ticket, $this->event));
+            // A confirmation issues a link only while the email is still unverified. Re-sending it to a verified
+            // email must never un-verify it.
+            $verifyToken = $this->event === TicketEmailEvent::JOINED && ! $ticket->isEmailVerified()
+                ? $this->issueVerificationToken($ticket)
+                : null;
+            Mail::to($this->email)->send(new QueueEmail($ticket, $this->event, $verifyToken));
             $claim->update(['sent_at' => now()]);
         } catch (Throwable $exception) {
             // Release the claim so the retry can send. The address is never logged.
@@ -77,6 +83,10 @@ class SendQueueEmailJob implements ShouldQueue
      */
     private function stillRelevant(QueueTicket $ticket): bool
     {
+        if ($this->event !== TicketEmailEvent::JOINED && ! $ticket->isEmailVerified()) {
+            return false;
+        }
+
         return match ($this->event) {
             TicketEmailEvent::JOINED, TicketEmailEvent::CANCELLED => true,
             TicketEmailEvent::CALLED => $ticket->status === QueueTicket::STATUS_CALLED,
@@ -86,6 +96,21 @@ class SendQueueEmailJob implements ShouldQueue
             TicketEmailEvent::ONE_AHEAD => $ticket->status === QueueTicket::STATUS_WAITING
                 && $this->peopleAheadNow($ticket) === 1,
         };
+    }
+
+    /**
+     * A new confirmation issues a fresh verification token. Only its hash is stored, so the plain token exists
+     * only in the email that is about to be sent. A resend replaces the previous link.
+     */
+    private function issueVerificationToken(QueueTicket $ticket): string
+    {
+        $token = Str::random(48);
+        $ticket->forceFill([
+            'email_verification_hash' => hash('sha256', $token),
+            'email_verified_at' => null,
+        ])->save();
+
+        return $token;
     }
 
     private function peopleAheadNow(QueueTicket $ticket): int

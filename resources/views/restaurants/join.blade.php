@@ -18,6 +18,8 @@
         .join-error { color: #b42318; font-size: 13px; font-weight: 600; }
         .join-alert { border: 1px solid #f5c2bb; background: #fef3f2; color: #7a271a; border-radius: 8px; padding: 12px 14px; line-height: 1.45; margin: 0; }
         .join-submit { min-height: 52px; font-size: 16px; }
+        .join-consent { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; color: var(--ink); font-size: 14px; line-height: 1.5; }
+        .join-consent input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--green); }
         .join-privacy { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
     </style>
 
@@ -67,6 +69,12 @@
                 <small id="email-help">Dipakai hanya untuk pemberitahuan antrean ini.</small>
                 @error('email')<span class="join-error" role="alert">{{ $message }}</span>@enderror
             </label>
+
+            <label class="join-consent">
+                <input type="checkbox" name="consent" value="1" required @checked(old('consent'))>
+                <span>Saya setuju email ini dipakai hanya untuk pemberitahuan antrean, dan dihapus setelah antrean selesai, dilewati, atau dibatalkan. <a class="text-link" href="{{ route('privacy') }}">Kebijakan privasi</a></span>
+            </label>
+            @error('consent')<span class="join-error" role="alert">Centang persetujuan untuk melanjutkan.</span>@enderror
 
             <button class="button button-green join-submit" type="submit" @disabled(! $snapshot['available'])>Ambil Antrean</button>
             @unless ($snapshot['available'])

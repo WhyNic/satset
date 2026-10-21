@@ -16,7 +16,7 @@ class QueueEmail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public QueueTicket $ticket, public string $event) {}
+    public function __construct(public QueueTicket $ticket, public string $event, public ?string $verifyToken = null) {}
 
     public function envelope(): Envelope
     {
@@ -32,6 +32,7 @@ class QueueEmail extends Mailable
                 'heading' => $this->subjectLine(),
                 'lines' => $this->lines(),
                 'url' => route('queue.show', ['ticket' => $this->ticket->public_token]),
+                'verifyUrl' => $this->verifyUrl(),
             ],
         );
     }
@@ -75,6 +76,18 @@ class QueueEmail extends Mailable
                 "Antrean {$number} di {$name} telah dibatalkan.",
             ],
         };
+    }
+
+    /**
+     * Only the confirmation carries the verification link, and only while a token has just been issued.
+     */
+    private function verifyUrl(): ?string
+    {
+        if ($this->event !== TicketEmailEvent::JOINED || $this->verifyToken === null) {
+            return null;
+        }
+
+        return route('queue.verify', ['ticket' => $this->ticket->public_token, 'token' => $this->verifyToken]);
     }
 
     /**
